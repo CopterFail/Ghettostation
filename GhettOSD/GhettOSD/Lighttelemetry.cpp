@@ -190,6 +190,7 @@ void ltm_read() {
       if(LTMreceiverIndex == LTMframelength-4) {   // received checksum byte
         if(LTMrcvChecksum == 0) {
             ltm_check();
+ //Serial.write('G');
             c_state = IDLE;
         }
         else {                                                   // wrong checksum, drop packet

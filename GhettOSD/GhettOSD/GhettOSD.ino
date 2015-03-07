@@ -161,7 +161,7 @@ void setup()
 
     // House cleaning, clear display and enable timers
     osd.clear();
-
+//    Serial.println("setup" );
 } // END of setup();
 
 

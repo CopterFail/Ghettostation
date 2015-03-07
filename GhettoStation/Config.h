@@ -1,10 +1,11 @@
 /*############################################## CONFIGURATION ####################################################
  # Comment/uncomment/edit according to your needs.
  ##################################################################################################################*/
- #define CONFIG_VERSION 1003 // Changing this will reset eeprom to default values
+ #define CONFIG_VERSION 1004 // Changing this will reset eeprom to default values
 //########## BOARD ################################################################################################
- #define TEENSYPLUS2 // Teensy++2 support. 
+// #define TEENSYPLUS2 // Teensy++2 support.
 //#define MEGA // Arduino Mega board
+#define TEENSY31
 
 //########## OPTIONS ###############################################################################################
 
@@ -52,11 +53,12 @@
  #define OSD_BAUD 57600
 //########### LCD ##################################################################################################
 //LCD model
-#define LCDLCM1602 // (adress: 0x27 or 0x20) HobbyKing IIC/I2C/TWI Serial 2004 20x4, LCM1602 IIC A0 A1 A2 & YwRobot Arduino LCM1602 IIC V1
+//#define LCDLCM1602 // (adress: 0x27 or 0x20) HobbyKing IIC/I2C/TWI Serial 2004 20x4, LCM1602 IIC A0 A1 A2 & YwRobot Arduino LCM1602 IIC V1
 //#define LCDGYLCD  // (adress: 0x20) Arduino-IIC-LCD GY-LCD-V1Arduino-IIC-LCD GY-LCD-V1
 //#define LCD03I2C  // (adress: 0x63 or  0xc6) LCD03 / LCD05 
 //#define GLCDEnable // Graphical LCD - Using system5x7 font so its nearly 20x4 size
 //#define OLEDLCD  // Oled 128x64 i2c LCD (address 0x3C or 0x3D)
+#define LCDST7735	// 128 x 180 pixel SPI LCD
 
 // I2C LCD Adress
 #define I2CADRESS 0x27 // LCD03/05 have 0x63 or 0xc6 ( even if it's written 0xc6 when powering the lcd03, in fact it uses 0x63 so try booth)
@@ -105,8 +107,37 @@
   #define BUZZER_PIN        8   //(PH5) Any PWM pin ((add a 100-150 ohm resistor between buzzer & ground)
 #endif
 
-//################################################## DEBUG ##########################################################
-//#define DEBUG
+#ifdef TEENSY31
+  #define PAN_SERVOPIN     23	//PWM Pin for pan servo
+  #define TILT_SERVOPIN    22   //PWM Pin for tilt ervo
+  #define LEFT_BUTTON_PIN   2   //Any Digital pin
+  #define RIGHT_BUTTON_PIN  3   //Any Digital pin
+  #define ENTER_BUTTON_PIN  4   //Any Digital pin
+  #define ADC_VOLTAGE      15   //ADC pin used for voltage reading
+  #define BUZZER_PIN        6   //(PH5) Any PWM pin ((add a 100-150 ohm resistor between buzzer & ground)
 
+  #define PIN_SCLK         14  // SCLK can also use pin 14 13
+  #define PIN_MOSI         11  // MOSI can also use pin 7
+  #define PIN_CS           20  // CS & DC can use pins 2, 6, 9, 10, 15, 20, 21, 22, 23
+  #define PIN_DC           21  //  but certain pairs must NOT be used: 2+10, 6+9, 20+23, 21+22
+  #define PIN_RST           8  // RST can use any pin
+  #define PIN_SDCS          5  // CS for SD card, can use any pin
+
+  #define PIN_BT_STATUS    16  // BT status, any digital pin
+  #define PIN_BT_PIN34     17  // BT mode, any digital pin
+
+  #define OSD_SERIAL 		Serial2  // use pins 9(RX2) and 10(TX2)
+  #define HOTT_BT_SERIAL	Serial1  // use pins 0(RX1) and 1(TX1)  // make this TELEMETRY_SERIAL for all protocols
+  //Serial3  // use pins 7(RX3) and 8(TX3)
+  // I2C use 18 and 19
+  #define SerialDebug 		Serial
+  #define PWMServo 			Servo
+
+
+#endif
+
+//################################################## DEBUG ##########################################################
+//#define GHETTO_DEBUG
 //###############################################END OF CONFIG#######################################################
+
 

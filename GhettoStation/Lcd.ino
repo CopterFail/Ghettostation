@@ -1,10 +1,13 @@
 //LCD 
 
+bool bLcdUpdate;
+
 void init_lcdscreen() {
-#ifdef DEBUG
+#ifdef GHETTO_DEBUG
     Serial.println("starting lcd"); 
 #endif
 
+  bLcdUpdate=false;
   read_voltage();
   char extract[20];
 
@@ -23,7 +26,7 @@ void init_lcdscreen() {
   display.display();
   delay(2500); //delay to init lcd in time.
   display.clearDisplay();
-#else
+#endif
 
 #ifdef GLCDEnable
     GLCD.Init(NON_INVERTED);
@@ -38,8 +41,71 @@ void init_lcdscreen() {
     sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
     GLCD.println(currentline);
     delay(1500); //delay to init lcd in time.
+#endif
 
-#else
+#ifdef LCDST7735
+    tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab
+    tft.fillScreen(ST7735_BLACK);
+    //delay(500);
+    tft.setRotation(1);
+    tft.setTextSize(1);
+    tft.setCursor(0, 0);
+    tft.setTextColor(ST7735_WHITE);
+    tft.setTextWrap(false);
+    tft.println(string_load1.copy(extract));
+    tft.println(string_load2.copy(extract));
+    tft.println(string_load3.copy(extract));
+    char currentline[21];
+    char bufferV[6];
+    sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
+    tft.println(currentline);
+    delay(500);
+#endif
+#ifdef LCD03I2C
+    LCD.begin(20,4);
+        delay(20);
+    LCD.backlight();
+    	delay(250);
+    LCD.noBacklight();
+    	delay(250);
+    LCD.backlight();
+        delay(250);
+    LCD.setCursor(0,0);
+    LCD.print(string_load1.copy(extract));
+    LCD.setCursor(0,1);
+    LCD.print(string_load2.copy(extract));
+    LCD.setCursor(0,2);
+    LCD.print(string_load3.copy(extract));
+    LCD.setCursor(0,3);
+    	char currentline[21];
+    	char bufferV[6];
+    	sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
+    LCD.print(currentline);
+    	delay(1500); //delay to init lcd in time.
+#endif
+#ifdef LCDLCM1602
+    LCD.begin(20,4);
+        delay(20);
+    LCD.backlight();
+    	delay(250);
+    LCD.noBacklight();
+    	delay(250);
+    LCD.backlight();
+        delay(250);
+    LCD.setCursor(0,0);
+    LCD.print(string_load1.copy(extract));
+    LCD.setCursor(0,1);
+    LCD.print(string_load2.copy(extract));
+    LCD.setCursor(0,2);
+    LCD.print(string_load3.copy(extract));
+    LCD.setCursor(0,3);
+    	char currentline[21];
+    	char bufferV[6];
+    	sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
+    LCD.print(currentline);
+    	delay(1500); //delay to init lcd in time.
+#endif
+#ifdef LCDGYLCD
     LCD.begin(20,4);
         delay(20);
     LCD.backlight();        
@@ -61,22 +127,37 @@ void init_lcdscreen() {
     LCD.print(currentline);
     	delay(1500); //delay to init lcd in time.
 #endif
-#endif
 }
 
 void store_lcdline( int i, char sbuffer[20] ) {
     
     switch (i) {
         case 1: 
+        	    if(strcmp(lcd_line1,sbuffer))
+        	    {
+        	    	bLcdUpdate=true;
+        	    }
                 strcpy(lcd_line1,sbuffer);
                 break;
         case 2: 
+    	    if(strcmp(lcd_line2,sbuffer))
+    	    {
+    	    	bLcdUpdate=true;
+    	    }
                 strcpy(lcd_line2,sbuffer);
                 break;
         case 3: 
+    	    if(strcmp(lcd_line3,sbuffer))
+    	    {
+    	    	bLcdUpdate=true;
+    	    }
                 strcpy(lcd_line3,sbuffer);
                 break;
         case 4: 
+    	    if(strcmp(lcd_line4,sbuffer))
+    	    {
+    	    	bLcdUpdate=true;
+    	    }
                 strcpy(lcd_line4,sbuffer);
                 break;
         default: 
@@ -89,6 +170,9 @@ void refresh_lcd() {
 // refreshing lcd at defined update.
 // update lines
 
+    if(!bLcdUpdate) return;
+    bLcdUpdate=false;
+
 #ifdef OLEDLCD
         display.clearDisplay();
         display.setCursor(0,0);
@@ -99,13 +183,20 @@ void refresh_lcd() {
         display.display();
         delay(100);
 #endif
-
 #ifdef GLCDEnable
        	GLCD.CursorTo(0,0);
-	GLCD.println(lcd_line1);
+	    GLCD.println(lcd_line1);
     	GLCD.println(lcd_line2);
     	GLCD.println(lcd_line3);
         GLCD.println(lcd_line4);
+#endif
+#ifdef LCDST7735
+        tft.fillScreen(ST7735_BLACK);
+        tft.setCursor(0, 0);
+        tft.println(lcd_line1);
+        tft.println(lcd_line2);
+        tft.println(lcd_line3);
+        tft.println(lcd_line4);
 #else
 	LCD.setCursor(0,0);
 	LCD.print(lcd_line1);

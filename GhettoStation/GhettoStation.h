@@ -5,14 +5,15 @@
 #define PROTOCOL_MAVLINK                        // Mavlink for Ardupilot / Autoquad / PixHawk / Taulabs (UAVOmavlinkBridge)
 #define PROTOCOL_NMEA                           //GPS NMEA ASCII protocol
 #define PROTOCOL_UBLOX                          //GPS UBLOX binary protocol
-#define COMPASS                                 //Keep it enabled even if unused
+#define PROTOCOL_HOTT							//HoTT USB / BT protocol
+//#define COMPASS                                 //Keep it enabled even if unused, but you will need i2c
 /* ######################################## HAL ####################################################*/
 #ifdef TEENSYPLUS2
 // This line defines a "Uart" object to access the serial port
 HardwareSerial SerialPort1 = HardwareSerial();
 HardwareSerial SerialDebug = HardwareSerial();
  #ifdef OSD_OUTPUT
-  SoftwareSerial SerialPort2(SOFTSERIAL_RX,SOFTSERIAL_TX);
+  SoftwareSerial OSD_SERIAL(SOFTSERIAL_RX,SOFTSERIAL_TX);
  #endif
 #endif
 #ifdef MEGA
@@ -22,7 +23,10 @@ HardwareSerial SerialPort1(Serial1);
  #endif
  HardwareSerial SerialDebug(Serial);
 #endif
-
+#ifdef TEENSY31
+ HardwareSerial SerialPort1(Serial1);
+  //HardwareSerial SerialDebug(Serial3);
+#endif
 int       softserial_delay = (int)round(10000000.0f/(OSD_BAUD)); // time to wait between each byte sent.
 
 //pan/tilt servos 
@@ -219,8 +223,6 @@ float toDeg(float angle) {
 }
 
 void attach_servo(PWMServo &s, int p, int min, int max) {
-  
-  
  // called at setup() or after a servo configuration change in the menu
 	if (!s.attached()) {
             s.attach(p,min,max);

@@ -18,15 +18,23 @@
 
 
 #include <avr/pgmspace.h>
-#include <arduino.h>
-#ifdef DEBUG
-#include <MemoryFree.h>
+#include <Arduino.h>
+
+#ifdef GHETTO_DEBUG
+//#include <MemoryFree.h>
 #endif
-#include <PWMServo.h>  
+
+#ifdef TEENSY31
+#include <Servo.h>
+#else
+//#include <PWMServo.h>
+#endif
 
 #ifdef TEENSYPLUS2
 #include <SoftwareSerial.h>
 #endif
+
+#include <SPI.h>
 #include <Wire.h> 
 
 #include <Metro.h>
@@ -60,6 +68,9 @@
 #ifdef PROTOCOL_UBLOX
 #include "GPS_UBLOX.cpp"
 #endif
+#ifdef PROTOCOL_HOTT
+#include "HottBtUsb.cpp"
+#endif
 
 /*
  * BOF preprocessor bug prevent
@@ -78,23 +89,35 @@ nop();
 #ifdef LCD03I2C
   #include <LCD03.h>
   LCD03 LCD(I2CADRESS);
-#else
+#endif
+#ifdef LCDLCM1602
   #include <LiquidCrystal_I2C.h>
-  #ifdef LCDLCM1602
   LiquidCrystal_I2C LCD(I2CADRESS, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  //   HobbyKing IIC/I2C/TWI Serial 2004 20x4, LCM1602 IIC A0 A1 A2 & YwRobot Arduino LCM1602 IIC V1
-  #else
+#endif
+#ifdef LCDGYLCD
+  #include <LiquidCrystal_I2C.h>
   LiquidCrystal_I2C LCD(I2CADRESS, 4, 5, 6, 0, 1, 2, 3, 7, NEGATIVE);  //   Arduino-IIC-LCD GY-LCD-V1
-  #endif
 #endif
 #ifdef GLCDEnable
   #include <glcd.h>
   #include "fonts/SystemFont5x7.h"
 #endif
+
 #ifdef OLEDLCD
   #include <Adafruit_GFX.h>
   #include <Adafruit_SSD1306.h>
   #define OLED_RESET 4
   Adafruit_SSD1306 display(OLED_RESET);
+#endif
+
+#ifdef LCDST7735
+  #include <Adafruit_GFX.h>    // Core graphics library
+  #include <Adafruit_ST7735.h> // Hardware-specific library
+  #include <SPI.h>
+
+
+  Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_MOSI, PIN_SCLK, PIN_RST);
+
 #endif
 
 //##### LOOP RATES
@@ -153,22 +176,18 @@ void setup() {
     attach_servo(pan_servo, PAN_SERVOPIN, configuration.pan_minpwm, configuration.pan_maxpwm);
     attach_servo(tilt_servo, TILT_SERVOPIN, configuration.tilt_minpwm, configuration.tilt_maxpwm); 
 
-        
     // move servo to neutral pan & DEFAULTELEVATION tilt at startup 
     servoPathfinder(0, DEFAULTELEVATION);
-       
     // setup button callback events
     enter_button.releaseHandler(enterButtonReleaseEvents);
     left_button.releaseHandler(leftButtonReleaseEvents);
     right_button.releaseHandler(rightButtonReleaseEvents);
-       
 #if defined(COMPASS)
     compass = HMC5883L(); // Construct a new HMC5883 compass.
     delay(100);
     compass.SetScale(1.3); // Set the scale of the compass.
     compass.SetMeasurementMode(Measurement_Continuous); // Set the measurement mode to Continuous
 #endif
-  
     delay(2500);  // Wait until osd is initialised
 
 }
@@ -181,20 +200,30 @@ void loop() {
     }
   
     if (loop10hz.check() == 1) {
-        //update buttons internal states
+//Serial.println("Test);
+
+    	//update buttons internal states
         enter_button.isPressed();
         left_button.isPressed();
         right_button.isPressed();
         #ifdef OSD_OUTPUT
         //pack & send LTM packets to SerialPort2 at 10hz.
-        ltm_write(); 
+        ltm_write();
+
+//Serial.write('Y');
+while( OSD_SERIAL.available() ){
+	Serial.write('.');
+	Serial.write( OSD_SERIAL.read() );
+}
+
+
         #endif
         //current activity loop
         check_activity();
         //update lcd screen
         refresh_lcd();
         //debug output to usb Serial
-        #if defined(DEBUG)
+        #ifdef GHETTO_DEBUG
         debug();
         #endif
         switch (buzzer_status) {
@@ -683,13 +712,19 @@ void configure_voltage_ratio(MenuItem* p_menu_item) {
 }
 
 //######################################## TELEMETRY FUNCTIONS #############################################
-void init_serial() {
-    Serial.begin(57600);
+void init_serial()
+{
+    Serial.begin(57600);	// always init the port for debug output
+#ifdef OSD_OUTPUT
+    OSD_SERIAL.begin(OSD_BAUD);
+#endif
+#ifdef PROTOCOL_HOTT
+    vHottInit();
+    configuration.telemetry=6;
+#else
     SerialPort1.begin(baudrates[configuration.baudrate]);
-    #ifdef OSD_OUTPUT
-    SerialPort2.begin(OSD_BAUD);
-    #endif
-#ifdef DEBUG
+#endif
+#ifdef GHETTO_DEBUG
     Serial.println("Serial initialised"); 
 #endif
 
@@ -785,6 +820,11 @@ void get_telemetry() {
        gps_ublox_read();      
    }
 #endif
+#if defined (PROTOCOL_HOTT)
+   if (configuration.telemetry==6) {
+	   vHottTelemetrie();
+   }
+#endif
 }
 
 //void telemetry_off() {
@@ -804,9 +844,8 @@ void get_telemetry() {
 
 
 
-
-void move_servo(PWMServo &s, int stype, int a, int mina, int maxa) {
-
+void move_servo(Servo &s, int stype, int a, int mina, int maxa)
+{
     if (stype == 1) {
         //convert angle for pan to pan servo reference point: 0° is pan_minangle
         if (a <= 180) {
@@ -977,8 +1016,8 @@ void calc_longitude_scaling(int32_t lat) {
 
 //######################################## COMPASS #############################################
 
-#if defined(COMPASS)
 void retrieve_mag() {
+#if defined(COMPASS)
 // Retrieve the raw values from the compass (not scaled).
     MagnetometerRaw raw = compass.ReadRawAxis();
 // Retrieved the scaled values from the compass (scaled to the configured scale).
@@ -1001,8 +1040,8 @@ void retrieve_mag() {
     
     // Convert radians to degrees for readability.
     home_bearing = (int)round(heading * 180/M_PI);
-}
 #endif
+}
 
 //######################################## BATTERY ALERT#######################################
 
@@ -1046,11 +1085,11 @@ void playTones(uint8_t alertlevel) {
 //######################################## DEBUG #############################################
 
 
-#if defined(DEBUG)
+#if defined(GHETTO_DEBUG)
 void debug() {
        Serial.print("mem ");
-       int freememory = freeMem();
-       Serial.println(freememory);
+       //int freememory = freeMem();
+       //Serial.println(freememory);
        Serial.print("activ:");
        Serial.println(current_activity);
        Serial.print("conftelem:");
