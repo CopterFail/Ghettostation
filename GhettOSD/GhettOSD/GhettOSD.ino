@@ -56,7 +56,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>
 /* ***************** INCLUDES *******************/
 
 //#define membug 
-//#define FORCEINIT  // You should never use this unless you know what you are doing 
+#define FORCEINIT  // You should never use this unless you know what you are doing
 
 // AVR Includes
 #include <FastSerial.h>

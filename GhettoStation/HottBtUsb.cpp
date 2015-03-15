@@ -1,11 +1,11 @@
-/* HoTT USB/BT Telemetry */
+/* HoTT USB/BT Telemetry , 2015 by CopterFail */
 
 #ifdef PROTOCOL_HOTT
 
 /* Configuration */
 #define HOTT_WAIT_TIME 800U		// time to wait for response
 #define HOTT_DELAY_TIME 1000U	// time to wait between requests
-#define HOTT_DEBUG
+//#define HOTT_DEBUG
 
 /* local defines */
 #define HOTT_REQUEST_GPS	1
@@ -128,6 +128,11 @@ void vHottTelemetrie( void )
 	static uint32_t ui32RequestTime = millis();
 	static bool bUpdate=false;
 	uint32_t ui32Timeout = millis() - ui32RequestTime;
+
+#ifdef HOTT_DEBUG
+ 	//Serial.print(ui8State);
+	//Serial.print(" ");
+#endif
 
 	switch( ui8State )
 	{

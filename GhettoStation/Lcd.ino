@@ -47,11 +47,12 @@ void init_lcdscreen() {
     tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab
     tft.fillScreen(ST7735_BLACK);
     //delay(500);
-    tft.setRotation(1);
-    tft.setTextSize(1);
+    tft.setRotation(3);
+    tft.setTextSize(1); // 1=5x7, 2=10x14
     tft.setCursor(0, 0);
     tft.setTextColor(ST7735_WHITE);
     tft.setTextWrap(false);
+    tft.println("01234567890123456789");
     tft.println(string_load1.copy(extract));
     tft.println(string_load2.copy(extract));
     tft.println(string_load3.copy(extract));
@@ -193,6 +194,11 @@ void refresh_lcd() {
 #ifdef LCDST7735
         tft.fillScreen(ST7735_BLACK);
         tft.setCursor(0, 0);
+        //lcd_line1[18] = 0;	// cut to 18 char per line
+        //lcd_line2[18] = 0;
+        //lcd_line3[18] = 0;
+        //lcd_line4[18] = 0;
+        tft.println("01234567890123456789");
         tft.println(lcd_line1);
         tft.println(lcd_line2);
         tft.println(lcd_line3);
@@ -421,7 +427,7 @@ void lcddisp_telemetry() {
                 string_load2.copy(currentline);  break;
             case 3:
                 switch (configuration.telemetry) {
-                     case 0:
+                    case 0:
                         // currentline = "UAVTalk"; break;
                         string_telemetry2.copy(currentline); break;
                     case 1:
@@ -438,7 +444,11 @@ void lcddisp_telemetry() {
                         string_telemetry6.copy(currentline); break;
                     case 5:
                         //currentline = "UBLOX"; break;
-                        string_telemetry7.copy(currentline); break;                     
+                        string_telemetry7.copy(currentline); break;
+                    default:
+                    case 6:
+                        //currentline = "HoTT"; break;
+                        string_telemetry8.copy(currentline); break;
                      }
                      break;
             case 4:      

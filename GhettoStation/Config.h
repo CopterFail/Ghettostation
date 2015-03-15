@@ -110,8 +110,8 @@
 #ifdef TEENSY31
   #define PAN_SERVOPIN     23	//PWM Pin for pan servo
   #define TILT_SERVOPIN    22   //PWM Pin for tilt ervo
-  #define LEFT_BUTTON_PIN   2   //Any Digital pin
-  #define RIGHT_BUTTON_PIN  3   //Any Digital pin
+  #define LEFT_BUTTON_PIN   3   //Any Digital pin
+  #define RIGHT_BUTTON_PIN  2   //Any Digital pin
   #define ENTER_BUTTON_PIN  4   //Any Digital pin
   #define ADC_VOLTAGE      15   //ADC pin used for voltage reading
   #define BUZZER_PIN        6   //(PH5) Any PWM pin ((add a 100-150 ohm resistor between buzzer & ground)

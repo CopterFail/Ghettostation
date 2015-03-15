@@ -112,12 +112,12 @@ nop();
 
 #ifdef LCDST7735
   #include <Adafruit_GFX.h>    // Core graphics library
+  //#include <Adafruit_mfGFX.h>    // Core graphics library
   #include <Adafruit_ST7735.h> // Hardware-specific library
   #include <SPI.h>
 
-
   Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_MOSI, PIN_SCLK, PIN_RST);
-
+  //Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_RST); // hardware spi
 #endif
 
 //##### LOOP RATES
@@ -578,7 +578,7 @@ void rightButtonReleaseEvents(Button &btn)
                 case 8:  configuration.tilt_minangle++; break;
                 case 9:  servoconf_tmp[3]++;            break;
                 case 10: configuration.tilt_maxangle++; break;
-                case 12: if (configuration.telemetry < 5) configuration.telemetry += 1;  break; 
+                case 12: if (configuration.telemetry < 6) configuration.telemetry += 1;  break;
                 case 13: if (configuration.baudrate  < 7) configuration.baudrate += 1;   break; 
                 case 14: if (current_bank < 3) current_bank += 1; else current_bank = 0; break;  
                 case 15: if (configuration.osd_enabled == 0) configuration.osd_enabled = 1; else configuration.osd_enabled = 0;    break;
@@ -720,7 +720,7 @@ void init_serial()
 #endif
 #ifdef PROTOCOL_HOTT
     vHottInit();
-    configuration.telemetry=6;
+    //configuration.telemetry=6;
 #else
     SerialPort1.begin(baudrates[configuration.baudrate]);
 #endif
@@ -846,6 +846,7 @@ void get_telemetry() {
 
 void move_servo(Servo &s, int stype, int a, int mina, int maxa)
 {
+	int microsec;
     if (stype == 1) {
         //convert angle for pan to pan servo reference point: 0° is pan_minangle
         if (a <= 180) {
@@ -856,12 +857,13 @@ void move_servo(Servo &s, int stype, int a, int mina, int maxa)
         } else if ((a > 180) && (a > (360-mina)))
             a = mina - (360-a);         
         // map angle to microseconds
-        int microsec = map(a, 0, mina+maxa, configuration.pan_minpwm, configuration.pan_maxpwm);
+        //microsec = map(a, 0, mina+maxa, configuration.pan_minpwm, configuration.pan_maxpwm);
+        microsec = map(a, 0, mina+maxa, configuration.pan_maxpwm, configuration.pan_minpwm);	// pan servo move counter clockwise....
         s.writeMicroseconds( microsec );
     }
     else if (stype == 2){
         //map angle to microseconds
-        int microsec = map(a, mina, maxa, configuration.tilt_minpwm, configuration.tilt_maxpwm);
+        microsec = map(a, mina, maxa, configuration.tilt_minpwm, configuration.tilt_maxpwm);
         s.writeMicroseconds( microsec );
     }
 }

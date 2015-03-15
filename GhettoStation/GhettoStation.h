@@ -139,7 +139,8 @@ FLASH_STRING(string_telemetry3, "<<    MULTIWII    >>");
 FLASH_STRING(string_telemetry4, "<< LIGHTTELEMETRY >>");
 FLASH_STRING(string_telemetry5, "<<     MAVLINK    >>");
 FLASH_STRING(string_telemetry6, "<<      NMEA      >>");
-FLASH_STRING(string_telemetry7, "<<      UBLOX       ");
+FLASH_STRING(string_telemetry7, "<<      UBLOX     >>");
+FLASH_STRING(string_telemetry8, "<<      HoTT        ");
 
 FLASH_STRING(string_baudrate,   "  SELECT BAUDRATE:  ");
 FLASH_STRING(string_baudrate0,  "        1200      >>");
