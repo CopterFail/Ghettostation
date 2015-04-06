@@ -193,6 +193,7 @@ void refresh_lcd() {
 #endif
 #ifdef LCDST7735
         tft.fillScreen(ST7735_BLACK);
+        tft.setTextColor(ST7735_WHITE);
         tft.setCursor(0, 0);
         //lcd_line1[18] = 0;	// cut to 18 char per line
         //lcd_line2[18] = 0;
@@ -203,6 +204,31 @@ void refresh_lcd() {
         tft.println(lcd_line2);
         tft.println(lcd_line3);
         tft.println(lcd_line4);
+
+        // print bar graph for battery and rssi with selected band and channel
+        uint16_t x = (int)(voltage_actual / 7.4) * 100;
+        uint16_t color = ST7735_GREEN;
+        if( buzzer_status == 1 )color = ST7735_YELLOW;
+        if( buzzer_status == 2 )color = ST7735_RED;
+        if(x>100)x=100;
+        tft.fillRect( 10, 64 , x, 14, color );
+        tft.fillRect( 10+x, 64 , 160-x, 14, ST7735_WHITE );
+
+        tft.setTextColor(ST7735_BLUE);
+        tft.setCursor(20, 64+2);
+        tft.print("Bat: ");
+        tft.print(voltage_actual);
+
+        x = analogRead(ADC_RSSI) / 1024 * 100;
+        x = x + 50;
+        if(x>100)x=100;
+        color = ST7735_GREEN;
+        tft.fillRect( 10, 84 , x, 14, color );
+        tft.fillRect( 10+x, 84 , 160-x, 14, ST7735_WHITE );
+        tft.setCursor(20, 84+2);
+        tft.print("RSSI: ");
+        tft.print(x);
+
 #else
 	LCD.setCursor(0,0);
 	LCD.print(lcd_line1);

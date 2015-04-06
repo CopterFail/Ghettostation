@@ -41,9 +41,11 @@
  #define BANK4  "Bank 4"
  
  //GS Battery alarm
- #define MIN_VOLTAGE1 10.5f // First battery alarm level. Will emit 2 short tones every 10 sec.
- #define MIN_VOLTAGE2 10.0f // Second battery alarm level. Will emit 1 short + 1 long tone every 5 sec
- #define VOLTAGE_RATIO 600   // Default multiplier for battery voltage reading * 100. This can eb adjustd later from the menu.
+ #define MIN_VOLTAGE1 7.0f //10.5f // First battery alarm level. Will emit 2 short tones every 10 sec.
+ #define MIN_VOLTAGE2 6.6f //10.0f // Second battery alarm level. Will emit 1 short + 1 long tone every 5 sec
+ #define VOLTAGE_RATIO 1100   // Default multiplier for battery voltage reading * 100. This can eb adjustd later from the menu.
+ #define VOLTAGE_REF 3.3f
+ #define DAMPING	0.9f
  
  // Minimum voltage for lipo alert
 //########### GROUND OSD TELEMETRY OUTPUT #########################################################################
@@ -126,10 +128,18 @@
   #define PIN_BT_STATUS    16  // BT status, any digital pin
   #define PIN_BT_PIN34     17  // BT mode, any digital pin
 
+  #define PIN_SPI_CLK_VRX	24 // reserved for RX5808 module with SPI mod, pin is smd pad
+  #define PIN_SPI_D1_VRX    25 // reserved for RX5808 module with SPI mod, pin is smd pad
+  #define PIN_SPI_D2_VRX    26 // reserved for RX5808 module with SPI mod, pin is smd pad
+  #define ADC_RSSI			27 // reserved for RX5808 module, pin is smd pad
+
+
   #define OSD_SERIAL 		Serial2  // use pins 9(RX2) and 10(TX2)
   #define HOTT_BT_SERIAL	Serial1  // use pins 0(RX1) and 1(TX1)  // make this TELEMETRY_SERIAL for all protocols
-  //Serial3  // use pins 7(RX3) and 8(TX3)
-  // I2C use 18 and 19
+
+  // Serial3:	use pins 7(RX3) and 8(TX3, already used by the display)
+  // I2C: 		use 18 and 19, reserved for mag
+
   #define SerialDebug 		Serial
   #define PWMServo 			Servo
 

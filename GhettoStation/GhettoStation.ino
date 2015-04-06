@@ -1048,7 +1048,10 @@ void retrieve_mag() {
 //######################################## BATTERY ALERT#######################################
 
 void read_voltage() {
-    voltage_actual = (analogRead(ADC_VOLTAGE) * 5.0 / 1024.0) * voltage_ratio;
+	float fval;
+    fval = (analogRead(ADC_VOLTAGE) * VOLTAGE_REF / 1024.0) * voltage_ratio;
+    //voltage_actual = DAMPING * voltage_actual + ( 1.0f - DAMPING ) * fval;
+    voltage_actual = fval;
     if (voltage_actual <= MIN_VOLTAGE2)
          buzzer_status = 2;
     else if (voltage_actual <= MIN_VOLTAGE1)

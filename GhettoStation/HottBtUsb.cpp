@@ -125,6 +125,7 @@ void vHottInit( void )
 void vHottTelemetrie( void )
 {
 	static uint8_t ui8State = HOTT_IDLE;
+	static uint8_t ui8GpsCnt = 4;
 	static uint32_t ui32RequestTime = millis();
 	static bool bUpdate=false;
 	uint32_t ui32Timeout = millis() - ui32RequestTime;
@@ -155,7 +156,15 @@ void vHottTelemetrie( void )
 #ifdef HOTT_DEBUG
 				Serial.println("HOTT_GPS_TIMEOUT");
 #endif
-				ui8State = HOTT_REQUEST_RX;
+				if( ui8GpsCnt > 0)
+				{
+					ui8GpsCnt--;
+					ui8State = HOTT_REQUEST_GPS;
+				}
+				else
+				{
+					ui8State = HOTT_REQUEST_RX;
+				}
 			}
 		    break;
 		case HOTT_REQUEST_RX:
@@ -178,6 +187,7 @@ void vHottTelemetrie( void )
 				Serial.println("HOTT_RX_TIMEOUT");
 #endif
 				ui8State = HOTT_UPDATE_GHETTO; //HOTT_REQUEST_RX;
+				ui8GpsCnt = 4;
 			}
 		    break;
 		case HOTT_UPDATE_GHETTO:
