@@ -1,5 +1,12 @@
 /* HoTT USB/BT Telemetry , 2015 by CopterFail */
 
+#include <Arduino.h>
+
+#include "defines.h"
+#include "boards.h"
+#include "globals.h"
+
+
 #ifdef PROTOCOL_HOTT
 
 /* Configuration */
@@ -116,9 +123,9 @@ void vHottInit( void )
   pinMode(PIN_BT_PIN34, OUTPUT);  
   pinMode(PIN_BT_STATUS, INPUT);
   digitalWrite(PIN_BT_PIN34, LOW);
-  HOTT_BT_SERIAL.begin(115200);  
+  TELEMETRY_SERIAL.begin(115200);
 #ifdef HOTT_DEBUG
-  Serial.println("vHottInit");
+  DEBUG_SERIAL.println("vHottInit");
 #endif
 }
 
@@ -131,8 +138,8 @@ void vHottTelemetrie( void )
 	uint32_t ui32Timeout = millis() - ui32RequestTime;
 
 #ifdef HOTT_DEBUG
- 	//Serial.print(ui8State);
-	//Serial.print(" ");
+ 	//DEBUG_SERIAL.print(ui8State);
+	//DEBUG_SERIAL.print(" ");
 #endif
 
 	switch( ui8State )
@@ -146,7 +153,7 @@ void vHottTelemetrie( void )
 			}
 			break;
 		case HOTT_WAIT_GPS:
-			if( HOTT_BT_SERIAL.available() >= sizeof(GPSData) )
+			if( TELEMETRY_SERIAL.available() >= sizeof(GPSData) )
 			{
 				if( bHottReadGpsResponse() ) bUpdate = true;
 				ui8State = HOTT_REQUEST_RX;
@@ -154,7 +161,7 @@ void vHottTelemetrie( void )
 			else if( ui32Timeout > HOTT_WAIT_TIME )
 			{
 #ifdef HOTT_DEBUG
-				Serial.println("HOTT_GPS_TIMEOUT");
+				DEBUG_SERIAL.println("HOTT_GPS_TIMEOUT");
 #endif
 				if( ui8GpsCnt > 0)
 				{
@@ -176,7 +183,7 @@ void vHottTelemetrie( void )
 			}
 			break;
 		case HOTT_WAIT_RX:
-			if( HOTT_BT_SERIAL.available() >= sizeof(ReceiverData) )
+			if( TELEMETRY_SERIAL.available() >= sizeof(ReceiverData) )
 			{
 				if(bHottReadReceiverResponse()) bUpdate = true;
 				ui8State = HOTT_UPDATE_GHETTO;
@@ -184,7 +191,7 @@ void vHottTelemetrie( void )
 			else if( ui32Timeout > HOTT_WAIT_TIME )
 			{
 #ifdef HOTT_DEBUG
-				Serial.println("HOTT_RX_TIMEOUT");
+				DEBUG_SERIAL.println("HOTT_RX_TIMEOUT");
 #endif
 				ui8State = HOTT_UPDATE_GHETTO; //HOTT_REQUEST_RX;
 				ui8GpsCnt = 4;
@@ -195,7 +202,7 @@ void vHottTelemetrie( void )
 			{
 				vUpdateGhettoData();
 #ifdef HOTT_DEBUG
-  Serial.println("HOTT_UPDATE_GHETTO");
+				DEBUG_SERIAL.println("HOTT_UPDATE_GHETTO");
 #endif
 			}
 			bUpdate = false;
@@ -214,23 +221,23 @@ void vHottTelemetrie( void )
 static void vHottSendGpsRequest( void )
 {
     vHottClean();
-	HOTT_BT_SERIAL.write( 0x00 );
-    HOTT_BT_SERIAL.write( 0x03 );
-    HOTT_BT_SERIAL.write( 0xfc );
-    HOTT_BT_SERIAL.write( 0x00 );
-    HOTT_BT_SERIAL.write( 0x00 );
-    HOTT_BT_SERIAL.write( 0x04 );
-    HOTT_BT_SERIAL.write( 0x38 ); 
-    HOTT_BT_SERIAL.write( 0x9f );
-    HOTT_BT_SERIAL.write( 0x7b );
+    TELEMETRY_SERIAL.write( 0x00 );
+    TELEMETRY_SERIAL.write( 0x03 );
+    TELEMETRY_SERIAL.write( 0xfc );
+    TELEMETRY_SERIAL.write( 0x00 );
+    TELEMETRY_SERIAL.write( 0x00 );
+    TELEMETRY_SERIAL.write( 0x04 );
+    TELEMETRY_SERIAL.write( 0x38 );
+    TELEMETRY_SERIAL.write( 0x9f );
+    TELEMETRY_SERIAL.write( 0x7b );
 }
 
 static bool bHottReadGpsResponse( void )
 {
 	uint8_t ui8Cnt;
-	ui8Cnt = HOTT_BT_SERIAL.readBytes( (uint8_t *)&GPSData, sizeof(GPSData) );
+	ui8Cnt = TELEMETRY_SERIAL.readBytes( (uint8_t *)&GPSData, sizeof(GPSData) );
 #ifdef HOTT_DEBUG
-				Serial.println(ui8Cnt);
+	DEBUG_SERIAL.println(ui8Cnt);
 #endif
 	return ( ui8Cnt == sizeof(GPSData) );
 }
@@ -238,30 +245,30 @@ static bool bHottReadGpsResponse( void )
 static void vHottSendReceiverRequest( void )
 {
     vHottClean();
-	HOTT_BT_SERIAL.write( 0x00 );
-    HOTT_BT_SERIAL.write( 0x03 );
-    HOTT_BT_SERIAL.write( 0xfc );
-    HOTT_BT_SERIAL.write( 0x00 );
-    HOTT_BT_SERIAL.write( 0x00 );
-    HOTT_BT_SERIAL.write( 0x04 );
-    HOTT_BT_SERIAL.write( 0x34 ); 
-    HOTT_BT_SERIAL.write( 0x13 );
-    HOTT_BT_SERIAL.write( 0xba );
+    TELEMETRY_SERIAL.write( 0x00 );
+    TELEMETRY_SERIAL.write( 0x03 );
+    TELEMETRY_SERIAL.write( 0xfc );
+    TELEMETRY_SERIAL.write( 0x00 );
+    TELEMETRY_SERIAL.write( 0x00 );
+    TELEMETRY_SERIAL.write( 0x04 );
+    TELEMETRY_SERIAL.write( 0x34 );
+    TELEMETRY_SERIAL.write( 0x13 );
+    TELEMETRY_SERIAL.write( 0xba );
 }
 
 static bool bHottReadReceiverResponse( void )
 {
 	uint8_t ui8Cnt;
-	ui8Cnt = HOTT_BT_SERIAL.readBytes( (uint8_t *)&ReceiverData, sizeof(ReceiverData) );
+	ui8Cnt = TELEMETRY_SERIAL.readBytes( (uint8_t *)&ReceiverData, sizeof(ReceiverData) );
 #ifdef HOTT_DEBUG
-				Serial.println(ui8Cnt);
+	DEBUG_SERIAL.println(ui8Cnt);
 #endif
 	return ( ui8Cnt == sizeof(ReceiverData) );
 }
 
 static bool vHottClean( void )
 {
-	while( HOTT_BT_SERIAL.available() > 0 ) HOTT_BT_SERIAL.read();
+	while( TELEMETRY_SERIAL.available() > 0 ) TELEMETRY_SERIAL.read();
 }
 
 static bool bIsBtConnected( void )

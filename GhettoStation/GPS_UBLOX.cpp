@@ -1,7 +1,6 @@
 /*
 	GPS_UBLOX.cpp - Ublox GPS library for Arduino
 	Code by Jordi Muñoz and Jose Julio. DIYDrones.com
-	This code works with boards based on ATMega168/328 and ATMega1280 (Serial port 1)
 
 	This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -32,6 +31,13 @@
 		Fix : 1: GPS FIX, 0: No Fix (normal logic)
 			
 */
+
+#include <Arduino.h>
+
+#include "defines.h"
+#include "boards.h"
+#include "globals.h"
+
 #if defined(PROTOCOL_UBLOX)
 #include "GPS_UBLOX.h"
 
@@ -63,11 +69,11 @@ void GPS_UBLOX_Class::Read(void)
   byte data;
   int numc;
   
-  numc = SerialPort1.available();
+  numc = TELEMETRY_SERIAL.available();
   if (numc > 0)
     for (int i=0;i<numc;i++)  // Process bytes received
       {
-      data = SerialPort1.read();
+      data = TELEMETRY_SERIAL.read();
       switch(UBX_step)     //Normally we start from zero. This is a state machine
       {
       case 0:  
@@ -98,7 +104,7 @@ void GPS_UBLOX_Class::Read(void)
 		if (UBX_payload_length_hi>=UBX_MAXPAYLOAD)
         {
 		  if (PrintErrors)
-			SerialDebug.println("ERR:GPS_BAD_PAYLOAD_LENGTH!!");          
+			  DEBUG_SERIAL.println("ERR:GPS_BAD_PAYLOAD_LENGTH!!");
           UBX_step=0;   //Bad data, so restart to step zero and try again.     
           ck_a=0;
           ck_b=0;
@@ -133,7 +139,7 @@ void GPS_UBLOX_Class::Read(void)
         else
 		  {
 		  if (PrintErrors)
-			SerialDebug.println("ERR:GPS_CHK!!");
+			  DEBUG_SERIAL.println("ERR:GPS_CHK!!");
 		  }
         // Variable initialization
         UBX_step=0;
@@ -148,7 +154,7 @@ void GPS_UBLOX_Class::Read(void)
     {
 	Fix = 0;
 	if (PrintErrors)
-	  SerialDebug.println("ERR:GPS_TIMEOUT!!");
+		DEBUG_SERIAL.println("ERR:GPS_TIMEOUT!!");
     }
 }
 

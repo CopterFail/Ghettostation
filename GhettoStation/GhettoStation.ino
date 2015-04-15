@@ -14,26 +14,33 @@
  *****************************************************************************
 */
  
-#include "Config.h"
-
 
 #include <avr/pgmspace.h>
 #include <Arduino.h>
+
+#include "defines.h"
+#include "boards.h"
+#include "globals.h"
+#include "common.h"
+
+
+/* Arduino needs all includes in the main ino file - even when not used */
+//#include <LCD03.h>
+//#include <LiquidCrystal_I2C.h>
+//#include <glcd.h>
+//#include "fonts/SystemFont5x7.h"
+#include <Adafruit_GFX.h>
+//#include <Adafruit_SSD1306.h>
+//#include <Adafruit_mfGFX.h>    // Core graphics library
+#include <Adafruit_ST7735.h> // Hardware-specific library
+#include <SPI.h>
+/*/Arduino needs all includes in the main ino file - even when not used */
 
 #ifdef GHETTO_DEBUG
 //#include <MemoryFree.h>
 #endif
 
-#ifdef TEENSY31
 #include <Servo.h>
-#else
-//#include <PWMServo.h>
-#endif
-
-#ifdef TEENSYPLUS2
-#include <SoftwareSerial.h>
-#endif
-
 #include <SPI.h>
 #include <Wire.h> 
 
@@ -43,34 +50,23 @@
 #include <EEPROM.h>
 #include <Flash.h>
 #include <EEPROM.h>
-#include "GhettoStation.h"
+
+#include "menu.h"
+#include "buzzer.h"
+#include "lcd.h"
 
 #ifdef COMPASS //use additional hmc5883L mag breakout
 //HMC5883L i2c mag b
 #include <HMC5883L.h>
 #endif
 
-#ifdef PROTOCOL_UAVTALK
-#include "UAVTalk.cpp"
-#endif
-#ifdef PROTOCOL_MSP
-#include "MSP.cpp"
-#endif
-#ifdef PROTOCOL_LIGHTTELEMETRY
-#include "LightTelemetry.cpp"
-#endif
-#ifdef PROTOCOL_MAVLINK
-#include "Mavlink.cpp"
-#endif
-#ifdef PROTOCOL_NMEA
-#include "GPS_NMEA.cpp"
-#endif
-#ifdef PROTOCOL_UBLOX
-#include "GPS_UBLOX.cpp"
-#endif
-#ifdef PROTOCOL_HOTT
-#include "HottBtUsb.cpp"
-#endif
+#include "UAVTalk.h"
+#include "MSP.h"
+#include "LightTelemetry.h"
+#include "Mavlink.h"
+#include "GPS_NMEA.h"
+#include "GPS_UBLOX.h"
+#include "HottBtUsb.h"
 
 /*
  * BOF preprocessor bug prevent
@@ -83,42 +79,77 @@ nop();
  * EOF preprocessor bug prevent
 */
 
-//################################### SETTING OBJECTS ###############################################
-// Set the pins on the I2C chip used for LCD connections:
-// addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
-#ifdef LCD03I2C
-  #include <LCD03.h>
-  LCD03 LCD(I2CADRESS);
-#endif
-#ifdef LCDLCM1602
-  #include <LiquidCrystal_I2C.h>
-  LiquidCrystal_I2C LCD(I2CADRESS, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  //   HobbyKing IIC/I2C/TWI Serial 2004 20x4, LCM1602 IIC A0 A1 A2 & YwRobot Arduino LCM1602 IIC V1
-#endif
-#ifdef LCDGYLCD
-  #include <LiquidCrystal_I2C.h>
-  LiquidCrystal_I2C LCD(I2CADRESS, 4, 5, 6, 0, 1, 2, 3, 7, NEGATIVE);  //   Arduino-IIC-LCD GY-LCD-V1
-#endif
-#ifdef GLCDEnable
-  #include <glcd.h>
-  #include "fonts/SystemFont5x7.h"
-#endif
+/**
+ * global variable definition, see globals.h
+ */
+//Telemetry variables
+int32_t      uav_lat = 0;                    // latitude
+int32_t      uav_lon = 0;                    // longitude
+float        lonScaleDown=0.0;               // longitude scaling
+uint8_t      uav_satellites_visible = 0;     // number of satellites
+uint8_t      uav_fix_type = 0;               // GPS lock 0-1=no fix, 2=2D, 3=3D
+int32_t      uav_alt = 0;                    // altitude (dm)
+int32_t      rel_alt = 0;                    // relative altitude to home
+uint16_t     uav_groundspeed = 0;            // ground speed in km/h
+uint8_t      uav_groundspeedms = 0;          // ground speed in m/s
+int16_t      uav_pitch = 0;                  // attitude pitch
+int16_t      uav_roll = 0;                   // attitude roll
+int16_t      uav_heading = 0;                // attitude heading
+int16_t      uav_gpsheading=0;               // gps heading
+uint16_t     uav_bat = 0;                    // battery voltage (mv)
+uint16_t     uav_amp = 0;                    // consumed mah.
+uint16_t     uav_current = 0;                // actual current
+uint8_t      uav_rssi = 0;                   // radio RSSI (%)
+uint8_t      uav_linkquality = 0;            // radio link quality
+uint8_t      uav_airspeed = 0;               // Airspeed sensor (m/s)
+uint8_t      ltm_armfsmode = 0;
+uint8_t      uav_arm = 0;                    // 0: disarmed, 1: armed
+uint8_t      uav_failsafe = 0;               // 0: normal,   1: failsafe
+uint8_t      uav_flightmode = 19;            // Flight mode(0-19): 0: Manual, 1: Rate, 2: Attitude/Angle, 3: Horizon, 4: Acro, 5: Stabilized1, 6: Stabilized2, 7: Stabilized3,
+                                             // 8: Altitude Hold, 9: Loiter/GPS Hold, 10: Auto/Waypoints, 11: Heading Hold / headFree, 12: Circle, 13: RTH, 14: FollowMe, 15: LAND,
+                                             // 16:FlybyWireA, 17: FlybywireB, 18: Cruise, 19: Unknown
 
-#ifdef OLEDLCD
-  #include <Adafruit_GFX.h>
-  #include <Adafruit_SSD1306.h>
-  #define OLED_RESET 4
-  Adafruit_SSD1306 display(OLED_RESET);
-#endif
+float        voltage_ratio;              // voltage divider ratio for gs battery reading
+float        voltage_actual = 0.0;           // gs battery voltage in mv
 
-#ifdef LCDST7735
-  #include <Adafruit_GFX.h>    // Core graphics library
-  //#include <Adafruit_mfGFX.h>    // Core graphics library
-  #include <Adafruit_ST7735.h> // Hardware-specific library
-  #include <SPI.h>
+char* protocol = "";
+long lastpacketreceived;
+static boolean      enable_frame_request = 0;
 
-  Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_MOSI, PIN_SCLK, PIN_RST);
-  //Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_RST); // hardware spi
-#endif
+
+//home
+int32_t home_lon;
+int32_t home_lat;
+int32_t home_alt;
+int16_t home_bearing = 0;
+uint32_t home_dist;
+uint8_t home_sent = 0;
+
+//tracking
+int Bearing;
+int Elevation;
+int servoBearing=0;
+int servoElevation=0;
+
+int current_activity = 0; // Activity status 0: Menu , 1: Track, 2: SET_HOME, 3: PAN_MINPWM, 4: PAN_MINANGLE, 5: PAN_MAXPWM,
+                          // 6: PAN_MAXANGLE, 7: TILT_MINPWM, 8: TILT_MINANGLE, 9: TILT_MAXPWM, 10: TILT_MAXANGLE, 11: TEST_SERVO, 12: SET_RATE
+boolean gps_fix      = false;
+boolean btholdstate  = false;
+boolean telemetry_ok = false;
+boolean home_pos     = false;
+boolean home_bear    = false;
+
+//servo temp configuration before saving
+int servoconf_tmp[4];
+int servoconfprev_tmp[4];
+uint8_t test_servo_step = 1;
+uint16_t test_servo_cnt = 360;
+//baudrate selection
+long baudrates[8]= {1200, 2400, 4800, 9600, 19200, 38400, BAUDRATE56K, 115200};
+
+//Configuration stored in EEprom
+config_t configuration;
+
 
 //##### LOOP RATES
 Metro loop1hz = Metro(1000); // 1hz loop
@@ -129,9 +160,27 @@ Button right_button = Button(RIGHT_BUTTON_PIN,BUTTON_PULLUP_INTERNAL);
 Button left_button = Button(LEFT_BUTTON_PIN,BUTTON_PULLUP_INTERNAL);
 Button enter_button = Button(ENTER_BUTTON_PIN,BUTTON_PULLUP_INTERNAL);
 
+//pan/tilt servos
+Servo pan_servo;
+Servo tilt_servo;
+
+cBuzzer Buzzer;
+
 #if defined(COMPASS)
 HMC5883L compass;
 #endif
+
+
+// local function prototypes
+void attach_servo(Servo &s, int p, int min, int max);
+void detach_servo(Servo &s);
+template <class T> int EEPROM_write(int ee, const T& value);
+template <class T> int EEPROM_read(int ee, T& value);
+void clear_eeprom();
+
+
+
+
 
 //#################################### SETUP LOOP ####################################################
 
@@ -160,16 +209,9 @@ void setup() {
         delay(20);
     }
     //init LCD
-#ifdef OLEDLCD
-  display.begin(SSD1306_SWITCHCAPVCC,I2CADRESS);  // initialize with the I2C addr 0x3D (for the 128x64)
-  display.display(); // show splashscreen
-  delay(2000);
-  display.clearDisplay();   // clears the screen and buffer
-  // init done
-#endif
-
     init_lcdscreen();
-         //start serial com 
+
+    //start serial com
     init_serial();
     
     // attach servos 
@@ -196,7 +238,8 @@ void setup() {
 void loop() {
    
    if (loop1hz.check()) {
-        read_voltage();      
+        read_voltage();
+        lcddisp_setupdateflag();
     }
   
     if (loop10hz.check() == 1) {
@@ -206,18 +249,18 @@ void loop() {
         enter_button.isPressed();
         left_button.isPressed();
         right_button.isPressed();
+
         #ifdef OSD_OUTPUT
         //pack & send LTM packets to SerialPort2 at 10hz.
         ltm_write();
 
 //Serial.write('Y');
 while( OSD_SERIAL.available() ){
-	Serial.write('.');
-	Serial.write( OSD_SERIAL.read() );
+	SerialDebug.write('.');
+	SerialDebug.write( OSD_SERIAL.read() );
 }
-
-
         #endif
+
         //current activity loop
         check_activity();
         //update lcd screen
@@ -226,16 +269,9 @@ while( OSD_SERIAL.available() ){
         #ifdef GHETTO_DEBUG
         debug();
         #endif
-        switch (buzzer_status) {
-            case 1:
-                playTones(1);
-                break;
-            case 2:
-                playTones(2);
-                break;
-            default:
-                break;            
-        }
+
+        Buzzer.vUpdate();
+
     }
     if (loop50hz.check() == 1) {
         //update servos
@@ -747,46 +783,7 @@ void get_telemetry() {
 #if defined(PROTOCOL_MSP) // Multiwii
     if (configuration.telemetry==1) {
         if (!PASSIVEMODE) {
-            static unsigned long previous_millis_low = 0;
-            static unsigned long previous_millis_high = 0;
-            static unsigned long previous_millis_onsec = 0;
-            static uint8_t queuedMSPRequests = 0;
-            unsigned long currentMillis = millis();
-            if((currentMillis - previous_millis_low) >= 1000) // 1hz
-            {
-                setMspRequests(); 
-            }
-            if((currentMillis - previous_millis_low) >= 100)  // 10 Hz (Executed every 100ms)
-            {
-                blankserialRequest(MSP_ATTITUDE); 
-                previous_millis_low = millis();
-            }
-            if((currentMillis - previous_millis_high) >= 200) // 20 Hz (Executed every 50ms)
-            {
-                uint8_t MSPcmdsend;
-                if(queuedMSPRequests == 0)
-                    queuedMSPRequests = modeMSPRequests;
-                uint32_t req = queuedMSPRequests & -queuedMSPRequests;
-                queuedMSPRequests &= ~req;
-                switch(req) {
-                    case REQ_MSP_IDENT:
-                      MSPcmdsend = MSP_IDENT;
-                      break;
-                    case REQ_MSP_STATUS:
-                      MSPcmdsend = MSP_STATUS;
-                      break;
-                    case REQ_MSP_RAW_GPS:
-                      MSPcmdsend = MSP_RAW_GPS;
-                      break;
-                    case REQ_MSP_ALTITUDE:
-                      MSPcmdsend = MSP_ALTITUDE;
-                      break;
-                    case REQ_MSP_ANALOG:
-                      MSPcmdsend = MSP_ANALOG;
-                      break;
-                } 
-            previous_millis_high = millis();
-            }
+        	msp_read2();
         }
     msp_read(); 
     }
@@ -867,6 +864,22 @@ void move_servo(Servo &s, int stype, int a, int mina, int maxa)
         s.writeMicroseconds( microsec );
     }
 }
+
+void attach_servo(Servo &s, int p, int min, int max) {
+ // called at setup() or after a servo configuration change in the menu
+	if (!s.attached()) {
+            s.attach(p,min,max);
+        }
+}
+
+void detach_servo(Servo &s) {
+ // called at setup() or after a servo configuration change in the menu
+	if (s.attached()) {
+	    s.detach();
+	}
+}
+
+
 
 void servoPathfinder(int angle_b, int angle_a){   // ( bearing, elevation )
 //find the best way to move pan servo considering 0° reference face toward
@@ -1053,38 +1066,66 @@ void read_voltage() {
     //voltage_actual = DAMPING * voltage_actual + ( 1.0f - DAMPING ) * fval;
     voltage_actual = fval;
     if (voltage_actual <= MIN_VOLTAGE2)
-         buzzer_status = 2;
+    	Buzzer.vsetStatus( BUZZER_ALARM );
     else if (voltage_actual <= MIN_VOLTAGE1)
-         buzzer_status = 1;
+         Buzzer.vsetStatus( BUZZER_WARN );
     else
-         buzzer_status = 0;
+    	Buzzer.vsetStatus( BUZZER_IDLE );
 }
 
-void playTones(uint8_t alertlevel) {
-    static int toneCounter = 0;
-    toneCounter += 1;
-    switch  (toneCounter) {
-        case 1:
-            tone(BUZZER_PIN ,  1047, 100); break;
-        case 4:
-            if (alertlevel == 1)
-                tone(BUZZER_PIN , 1047,100);
-            else if (alertlevel == 2)
-                tone(BUZZER_PIN , 1047,500);
-            break;
-        case 50:
-            if (alertlevel == 2) {
-                toneCounter = 0; 
-            }
-            break;
-        case 100:
-            if (alertlevel == 1) {
-                toneCounter = 0; 
-            }
-            break;
-        default: 
-            break;
-    }
+//######################################## EEPROM #############################################
+
+template <class T> int EEPROM_write(int ee, const T& value)
+{
+    const byte* p = (const byte*)(const void*)&value;
+    unsigned int i;
+    cli();
+    for (i = 0; i < sizeof(value); i++)
+          EEPROM.write(ee++, *p++);
+    sei();
+    return i;
+}
+
+template <class T> int EEPROM_read(int ee, T& value)
+{
+    byte* p = (byte*)(void*)&value;
+    unsigned int i;
+    cli();
+    for (i = 0; i < sizeof(value); i++)
+          *p++ = EEPROM.read(ee++);
+    sei();
+    return i;
+}
+
+
+
+
+void clear_eeprom() {
+    // clearing eeprom
+    cli();
+    for (int i = 0; i < 1025; i++)
+        EEPROM.write(i, 0);
+	// eeprom is clear  we can write default config
+        //writing 4 setting banks.
+        for (int j = 0; j < 4; j++) {
+	    configuration.config_crc = CONFIG_VERSION;  // config version check
+	    configuration.pan_minpwm = PAN_MINPWM;
+	    configuration.pan_minangle = PAN_MINANGLE;
+	    configuration.pan_maxpwm = PAN_MAXPWM;
+	    configuration.pan_maxangle = PAN_MAXANGLE;
+	    configuration.tilt_minpwm = TILT_MINPWM;
+	    configuration.tilt_minangle = TILT_MINANGLE;
+	    configuration.tilt_maxpwm = TILT_MAXPWM;
+            configuration.tilt_maxangle = TILT_MAXANGLE;
+	    configuration.baudrate = 6;
+            configuration.telemetry = 0;
+            configuration.bearing = 0;
+            configuration.osd_enabled = 0;
+            configuration.bearing_method = 1;
+            configuration.voltage_ratio = VOLTAGE_RATIO;  // ratio*10
+	    EEPROM_write(config_bank[j], configuration);
+        }
+        sei();
 }
 
 //######################################## DEBUG #############################################
@@ -1092,59 +1133,59 @@ void playTones(uint8_t alertlevel) {
 
 #if defined(GHETTO_DEBUG)
 void debug() {
-       Serial.print("mem ");
+	SerialDebug.print("mem ");
        //int freememory = freeMem();
-       //Serial.println(freememory);
-       Serial.print("activ:");
-       Serial.println(current_activity);
-       Serial.print("conftelem:");
-       Serial.println(configuration.telemetry);
-       Serial.print("baud");
-       Serial.println(configuration.baudrate);
-       Serial.print("lat=");
-       Serial.println(uav_lat/10000000.0,7);
-       Serial.print("lon=");
-       Serial.println(uav_lon/10000000.0,7);
-       Serial.print("alt=");
-       Serial.println(uav_alt);
-       Serial.print("rel_alt=");
-       Serial.println(rel_alt);
-       Serial.print(uav_groundspeed);
-       Serial.println(uav_groundspeed);
-       Serial.print("dst=");
-       Serial.println(home_dist);
-       Serial.print("El:");
-       Serial.println(Elevation);
-       Serial.print("Be:");
-       Serial.println(Bearing);
-       Serial.print("H Be:");
-       Serial.println(home_bearing);
-       Serial.print("uav_fix_type=");
-       Serial.println(uav_fix_type);
-       Serial.print("uav_satellites_visible=");
-       Serial.println(uav_satellites_visible);
-       Serial.print("pitch:");
-       Serial.println(uav_pitch);
-       Serial.print("roll:");
-       Serial.println(uav_roll);
-       Serial.print("yaw:");
-       Serial.println(uav_heading);
-       Serial.print("rbat:");
-       Serial.println(uav_bat);
-       Serial.print("amp:");
-       Serial.println(uav_amp);
-       Serial.print("rssi:");
-       Serial.println(uav_rssi);
-       Serial.print("aspeed:");
-       Serial.println(uav_airspeed);
-       Serial.print("armed:");
-       Serial.println(uav_arm);
-       Serial.print("fs:");
-       Serial.println(uav_failsafe);
-       Serial.print("fmode:");
-       Serial.println(uav_flightmode);
-       Serial.print("armfsmode");
-       Serial.println(ltm_armfsmode);
+       //SerialDebug.println(freememory);
+	SerialDebug.print("activ:");
+	SerialDebug.println(current_activity);
+	SerialDebug.print("conftelem:");
+	SerialDebug.println(configuration.telemetry);
+	SerialDebug.print("baud");
+	SerialDebug.println(configuration.baudrate);
+	SerialDebug.print("lat=");
+	SerialDebug.println(uav_lat/10000000.0,7);
+	SerialDebug.print("lon=");
+	SerialDebug.println(uav_lon/10000000.0,7);
+	SerialDebug.print("alt=");
+	SerialDebug.println(uav_alt);
+	SerialDebug.print("rel_alt=");
+	SerialDebug.println(rel_alt);
+	SerialDebug.print(uav_groundspeed);
+	SerialDebug.println(uav_groundspeed);
+	SerialDebug.print("dst=");
+	SerialDebug.println(home_dist);
+	SerialDebug.print("El:");
+	SerialDebug.println(Elevation);
+	SerialDebug.print("Be:");
+	SerialDebug.println(Bearing);
+	SerialDebug.print("H Be:");
+	SerialDebug.println(home_bearing);
+	SerialDebug.print("uav_fix_type=");
+	SerialDebug.println(uav_fix_type);
+	SerialDebug.print("uav_satellites_visible=");
+	SerialDebug.println(uav_satellites_visible);
+	SerialDebug.print("pitch:");
+	SerialDebug.println(uav_pitch);
+	SerialDebug.print("roll:");
+	SerialDebug.println(uav_roll);
+	SerialDebug.print("yaw:");
+	SerialDebug.println(uav_heading);
+	SerialDebug.print("rbat:");
+	SerialDebug.println(uav_bat);
+	SerialDebug.print("amp:");
+	SerialDebug.println(uav_amp);
+	SerialDebug.print("rssi:");
+	SerialDebug.println(uav_rssi);
+	SerialDebug.print("aspeed:");
+	SerialDebug.println(uav_airspeed);
+	SerialDebug.print("armed:");
+	SerialDebug.println(uav_arm);
+	SerialDebug.print("fs:");
+	SerialDebug.println(uav_failsafe);
+	SerialDebug.print("fmode:");
+	SerialDebug.println(uav_flightmode);
+	SerialDebug.print("armfsmode");
+	SerialDebug.println(ltm_armfsmode);
 }
 #endif
 

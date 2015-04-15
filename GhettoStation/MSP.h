@@ -1,5 +1,13 @@
-void msp_read();
-void msp_check();
+
+void msp_read( void );
+void msp_read2( void );
+void msp_check( void );
+
+
+void setMspRequests( void );
+void blankserialRequest(char requestMSP);
+
+
 
 // ---------------------------------------------------------------------------------------
 // Defines imported from Multiwii Serial Protocol MultiWii_shared svn r1337

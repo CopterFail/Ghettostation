@@ -1,8 +1,75 @@
-//LCD 
 
-bool bLcdUpdate;
+#include <avr/pgmspace.h>
+#include <Arduino.h>
 
-void init_lcdscreen() {
+#include <Flash.h>
+
+#include "defines.h"
+#include "boards.h"
+#include "globals.h"
+#include "common.h"
+#include "text.h"
+
+
+
+//################################### SETTING OBJECTS ###############################################
+// Set the pins on the I2C chip used for LCD connections:
+// addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
+#ifdef LCD03I2C
+  #include <LCD03.h>
+  LCD03 LCD(I2CADRESS);
+#endif
+#ifdef LCDLCM1602
+  #include <LiquidCrystal_I2C.h>
+  LiquidCrystal_I2C LCD(I2CADRESS, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  //   HobbyKing IIC/I2C/TWI Serial 2004 20x4, LCM1602 IIC A0 A1 A2 & YwRobot Arduino LCM1602 IIC V1
+#endif
+#ifdef LCDGYLCD
+  #include <LiquidCrystal_I2C.h>
+  LiquidCrystal_I2C LCD(I2CADRESS, 4, 5, 6, 0, 1, 2, 3, 7, NEGATIVE);  //   Arduino-IIC-LCD GY-LCD-V1
+#endif
+#ifdef GLCDEnable
+  #include <glcd.h>
+  #include "fonts/SystemFont5x7.h"
+#endif
+
+#ifdef OLEDLCD
+  #include <Adafruit_GFX.h>
+  #include <Adafruit_SSD1306.h>
+  #define OLED_RESET 4
+  Adafruit_SSD1306 display(OLED_RESET);
+#endif
+
+#ifdef LCDST7735
+  #include <Adafruit_GFX.h>    // Core graphics library
+  //#include <Adafruit_mfGFX.h>    // Core graphics library
+  #include <Adafruit_ST7735.h> // Hardware-specific library
+  #include <SPI.h>
+
+  Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_MOSI, PIN_SCLK, PIN_RST);
+  //Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_RST); // hardware spi
+#endif
+
+
+#include <MenuSystem.h>
+#include <Button.h>
+
+extern MenuSystem displaymenu;
+extern Button right_button;
+extern Button left_button;
+extern Button enter_button;
+void retrieve_mag( void );
+
+
+char lcd_line1[21];
+char lcd_line2[21];
+char lcd_line3[21];
+char lcd_line4[21];
+static bool bLcdUpdate;
+
+void read_voltage( void ); // defined in ghettostation.ino
+
+void init_lcdscreen( void )
+{
 #ifdef GHETTO_DEBUG
     Serial.println("starting lcd"); 
 #endif
@@ -10,6 +77,15 @@ void init_lcdscreen() {
   bLcdUpdate=false;
   read_voltage();
   char extract[20];
+
+#ifdef OLEDLCD
+  display.begin(SSD1306_SWITCHCAPVCC,I2CADRESS);  // initialize with the I2C addr 0x3D (for the 128x64)
+  display.display(); // show splashscreen
+  delay(2000);
+  display.clearDisplay();   // clears the screen and buffer
+  // init done
+#endif
+
 
 // init LCD
 #ifdef OLEDLCD
@@ -208,8 +284,8 @@ void refresh_lcd() {
         // print bar graph for battery and rssi with selected band and channel
         uint16_t x = (int)(voltage_actual / 7.4) * 100;
         uint16_t color = ST7735_GREEN;
-        if( buzzer_status == 1 )color = ST7735_YELLOW;
-        if( buzzer_status == 2 )color = ST7735_RED;
+        //if( Buzzer.getStatus() == BUZZER_WARN ) color = ST7735_YELLOW;
+        //if( Buzzer.getStatus() == BUZZER_ALARM )color = ST7735_RED;
         if(x>100)x=100;
         tft.fillRect( 10, 64 , x, 14, color );
         tft.fillRect( 10+x, 64 , 160-x, 14, ST7735_WHITE );
@@ -239,6 +315,11 @@ void refresh_lcd() {
         LCD.setCursor(0,3);
         LCD.print(lcd_line4);
 #endif
+}
+
+void lcddisp_setupdateflag()
+{
+	bLcdUpdate = true;
 }
 
 void lcddisp_menu() {

@@ -40,4 +40,6 @@ class GPS_NMEA_Class
 
 extern GPS_NMEA_Class GPS_NMEA;
 
+void gps_nmea_read( void );
+
 #endif

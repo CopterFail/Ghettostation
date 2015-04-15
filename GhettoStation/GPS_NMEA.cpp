@@ -1,7 +1,6 @@
 /*
 	GPS_NMEA.cpp - Generic NMEA GPS library for Arduino
 	Code by Jordi Muñoz and Jose Julio. DIYDrones.com
-	This code works with boards based on ATMega168/328 and ATMega1280 (Serial port 1)
 
 	This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -37,6 +36,12 @@
    NOTE : This code has been tested on a Locosys 20031 GPS receiver (MTK chipset)
 */
 
+#include <Arduino.h>
+
+#include "defines.h"
+#include "boards.h"
+#include "globals.h"
+
 #if defined(PROTOCOL_NMEA)
 #include "GPS_NMEA.h"
 
@@ -65,10 +70,10 @@ void GPS_NMEA_Class::Read(void)
   char c;
   int numc;
   int i;
-	numc = SerialPort1.available();
+	numc = TELEMETRY_SERIAL.available();
   if (numc > 0)
     for (i=0;i<numc;i++){
-	  c = SerialPort1.read();
+	  c = TELEMETRY_SERIAL.read();
       if (c == '$'){                      // NMEA Start
         bufferidx = 0;
         buffer[bufferidx++] = c;

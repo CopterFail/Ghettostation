@@ -15,6 +15,12 @@
  *      $     T   S   VBAT(mv)  Current(ma)   RSSI  AIRSPEED  ARM/FS/FMOD   CRC
  * ################################################################################################################# */
 
+#include <Arduino.h>
+
+#include "defines.h"
+#include "boards.h"
+#include "globals.h"
+
 #if defined(PROTOCOL_LIGHTTELEMETRY)
 #include "LightTelemetry.h"
   static uint8_t LTMserialBuffer[LIGHTTELEMETRY_GFRAMELENGTH-4];
@@ -55,16 +61,16 @@ void ltm_read() {
   }
   c_state = IDLE;
   
-  while (SerialPort1.available()) {
-    c = char(SerialPort1.read());
+  while (TELEMETRY_SERIAL.available()) {
+    c = char(TELEMETRY_SERIAL.read());
 
     if (c_state == IDLE) {
       c_state = (c=='$') ? HEADER_START1 : IDLE;
-        //Serial.println("header $" );
+        //TELEMETRY_SERIAL.println("header $" );
     }
     else if (c_state == HEADER_START1) {
       c_state = (c=='T') ? HEADER_START2 : IDLE;
-        //Serial.println("header T" );
+        //TELEMETRY_SERIAL.println("header T" );
     }
     else if (c_state == HEADER_START2) {
       switch (c) {
@@ -157,8 +163,8 @@ void ltm_check() {
  
 
 
-/* ########################################################################################
-/*                            LightTelemetry OSD output 
+/* ########################################################################################*/
+/*                            LightTelemetry OSD output                                    */
 /* ########################################################################################*/
 #ifdef OSD_OUTPUT
 
@@ -304,12 +310,12 @@ static void send_LTM_Oframe()  // this farme is only dedicated to OSD.
     LTBuff[14]= (home_alt >> 8*3) & 0xFF;
     LTBuff[15]= (configuration.osd_enabled >> 8*0) & 0xFF;
     LTBuff[16]= (home_bear >> 8*0) & 0XFF;
- Serial.println(LTBuff[15]);
+    DEBUG_SERIAL.println(LTBuff[15]);
     send_LTM_Packet(LTBuff,LIGHTTELEMETRY_OFRAMELENGTH);
     
 }
 
-void ltm_write() {
+void ltm_write( void ) {
         send_LTM_Aframe();
         send_LTM_Sframe();
         send_LTM_Gframe();

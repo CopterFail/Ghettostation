@@ -44,4 +44,6 @@ class GPS_UBLOX_Class
 
 extern GPS_UBLOX_Class GPS_UBLOX;
 
+void gps_ublox_read( void );
+
 #endif

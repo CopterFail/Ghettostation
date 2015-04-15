@@ -1,4 +1,11 @@
 
+#include <Arduino.h>
+
+#include "defines.h"
+#include "boards.h"
+#include "globals.h"
+
+
 #if defined(PROTOCOL_MSP)
 #include "MSP.h"
 
@@ -29,6 +36,50 @@ uint32_t read32() {
   return t;
 }
 
+void msp_read2() { // moved from ghettostation.ino..
+    static unsigned long previous_millis_low = 0;
+    static unsigned long previous_millis_high = 0;
+    static unsigned long previous_millis_onsec = 0;
+    static uint8_t queuedMSPRequests = 0;
+    unsigned long currentMillis = millis();
+    if((currentMillis - previous_millis_low) >= 1000) // 1hz
+    {
+        setMspRequests();
+    }
+    if((currentMillis - previous_millis_low) >= 100)  // 10 Hz (Executed every 100ms)
+    {
+        blankserialRequest(MSP_ATTITUDE);
+        previous_millis_low = millis();
+    }
+    if((currentMillis - previous_millis_high) >= 200) // 20 Hz (Executed every 50ms)
+    {
+        uint8_t MSPcmdsend;
+        if(queuedMSPRequests == 0)
+            queuedMSPRequests = modeMSPRequests;
+        uint32_t req = queuedMSPRequests & -queuedMSPRequests;
+        queuedMSPRequests &= ~req;
+        switch(req) {
+            case REQ_MSP_IDENT:
+              MSPcmdsend = MSP_IDENT;
+              break;
+            case REQ_MSP_STATUS:
+              MSPcmdsend = MSP_STATUS;
+              break;
+            case REQ_MSP_RAW_GPS:
+              MSPcmdsend = MSP_RAW_GPS;
+              break;
+            case REQ_MSP_ALTITUDE:
+              MSPcmdsend = MSP_ALTITUDE;
+              break;
+            case REQ_MSP_ANALOG:
+              MSPcmdsend = MSP_ANALOG;
+              break;
+        }
+    previous_millis_high = millis();
+    }
+
+}
+
 void msp_read() {
 
 
@@ -44,8 +95,8 @@ void msp_read() {
   }
   c_state = IDLE;
 
-  while (SerialPort1.available()) {
-    c = SerialPort1.read();
+  while (TELEMETRY_SERIAL.available()) {
+    c = TELEMETRY_SERIAL.read();
 
     if (c_state == IDLE) {
       c_state = (c=='$') ? HEADER_START : IDLE;
@@ -159,12 +210,12 @@ void msp_check() {
 // Request data to Multiwii ( unused yet )
 void blankserialRequest(char requestMSP) 
 {
-  Serial.write('$');
-  Serial.write('M');
-  Serial.write('<');
-  Serial.write((byte)0x00);
-  Serial.write(requestMSP);
-  Serial.write(requestMSP);
+	TELEMETRY_SERIAL.write('$');
+	TELEMETRY_SERIAL.write('M');
+	TELEMETRY_SERIAL.write('<');
+	TELEMETRY_SERIAL.write((byte)0x00);
+	TELEMETRY_SERIAL.write(requestMSP);
+	TELEMETRY_SERIAL.write(requestMSP);
 }
 
 //########################################### TX OSD OUTPUT###############################################################
