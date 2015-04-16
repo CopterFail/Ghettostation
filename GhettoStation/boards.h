@@ -68,10 +68,13 @@
   #define PIN_BT_STATUS    16  // BT status, any digital pin
   #define PIN_BT_PIN34     17  // BT mode, any digital pin
 
-  #define PIN_SPI_CLK_VRX	24 // reserved for RX5808 module with SPI mod, pin is smd pad
-  #define PIN_SPI_D1_VRX    25 // reserved for RX5808 module with SPI mod, pin is smd pad
-  #define PIN_SPI_D2_VRX    26 // reserved for RX5808 module with SPI mod, pin is smd pad
-  #define ADC_RSSI			27 // reserved for RX5808 module, pin is smd pad
+  #define PIN_RX_SPI_CLK	24 // reserved for RX5808 module with SPI mod, pin is smd pad, CS2
+  #define PIN_RX_SPI_DATA	25 // reserved for RX5808 module with SPI mod, pin is smd pad, CS0
+  #define PIN_RX_SPI_LE		26 // reserved for RX5808 module with SPI mod, pin is smd pad, CS1
+  #define ADC_RSSI_A		A16// reserved for RX5808 module, pin is smd pad (A16 / 27)
+  #define ADC_RSSI_B		A17 // reserved for RX5808 module, pin is smd pad (A17 / 28)
+  #define PIN_ENABLE_RX_A	32 // reserved for RX5808 module, pin is smd pad
+  #define PIN_ENABLE_RX_B	33 // reserved for RX5808 module, pin is smd pad
 
   #define OSD_SERIAL 		Serial2  // use pins 9(RX2) and 10(TX2)
   #define TELEMETRY_SERIAL	Serial1  // use pins 0(RX1) and 1(TX1)  // make this TELEMETRY_SERIAL for all protocols
@@ -80,8 +83,6 @@
   // reserved:
   // Serial3:	use pins 7(RX3) and 8(TX3, already used by the display)
   // I2C: 		use 18 and 19, reserved for mag
-
-  #define SerialDebug 		Serial
 
 #endif
 

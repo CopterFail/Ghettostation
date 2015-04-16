@@ -163,7 +163,7 @@ void GPS_NMEA_Class::parse_nmea_gps(void)
 	  else
 	    {
 		if (PrintErrors)
-	      SerialDebug.println("GPSERR: Checksum error!!");
+	      DEBUG_SERIAL.println("GPSERR: Checksum error!!");
 	    }
       }
     }
@@ -187,7 +187,7 @@ void GPS_NMEA_Class::parse_nmea_gps(void)
 	  else
 	    {
 		if (PrintErrors)
-	      SerialDebug.println("GPSERR: Checksum error!!");
+	      DEBUG_SERIAL.println("GPSERR: Checksum error!!");
 	    }
     }
   }
@@ -195,7 +195,7 @@ void GPS_NMEA_Class::parse_nmea_gps(void)
     {
 	bufferidx = 0;
 	if (PrintErrors)
-	  SerialDebug.println("GPSERR: Bad sentence!!");
+	  DEBUG_SERIAL.println("GPSERR: Bad sentence!!");
     }
 }
 

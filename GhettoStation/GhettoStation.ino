@@ -53,6 +53,7 @@
 
 #include "menu.h"
 #include "buzzer.h"
+#include "rx5808.h"
 #include "lcd.h"
 
 #ifdef COMPASS //use additional hmc5883L mag breakout
@@ -165,6 +166,7 @@ Servo pan_servo;
 Servo tilt_servo;
 
 cBuzzer Buzzer;
+cRX5808 RX5808;
 
 #if defined(COMPASS)
 HMC5883L compass;
@@ -243,7 +245,7 @@ void loop() {
     }
   
     if (loop10hz.check() == 1) {
-//Serial.println("Test);
+//DEBUG_SERIAL.println("Test);
 
     	//update buttons internal states
         enter_button.isPressed();
@@ -254,10 +256,10 @@ void loop() {
         //pack & send LTM packets to SerialPort2 at 10hz.
         ltm_write();
 
-//Serial.write('Y');
+//DEBUG_SERIAL.write('Y');
 while( OSD_SERIAL.available() ){
-	SerialDebug.write('.');
-	SerialDebug.write( OSD_SERIAL.read() );
+	DEBUG_SERIAL.write('.');
+	DEBUG_SERIAL.write( OSD_SERIAL.read() );
 }
         #endif
 
@@ -508,7 +510,7 @@ void check_activity() {
 
 void enterButtonReleaseEvents(Button &btn)
  {
-    //Serial.println(current_activity);  
+    //DEBUG_SERIAL.println(current_activity);
     if ( enter_button.holdTime() < 700 ) { // normal press    
         if ( current_activity == 0 ) { //button action depends activity state
             displaymenu.select();
@@ -750,18 +752,17 @@ void configure_voltage_ratio(MenuItem* p_menu_item) {
 //######################################## TELEMETRY FUNCTIONS #############################################
 void init_serial()
 {
-    Serial.begin(57600);	// always init the port for debug output
+	DEBUG_SERIAL.begin(57600);	// always init the port for debug output
 #ifdef OSD_OUTPUT
     OSD_SERIAL.begin(OSD_BAUD);
 #endif
 #ifdef PROTOCOL_HOTT
     vHottInit();
-    //configuration.telemetry=6;
 #else
-    SerialPort1.begin(baudrates[configuration.baudrate]);
+    TELEMETRY_SERIAL.begin(baudrates[configuration.baudrate]);
 #endif
 #ifdef GHETTO_DEBUG
-    Serial.println("Serial initialised"); 
+    DEBUG_SERIAL.println("Serial initialised");
 #endif
 
 }
@@ -1060,11 +1061,16 @@ void retrieve_mag() {
 
 //######################################## BATTERY ALERT#######################################
 
-void read_voltage() {
-	float fval;
-    fval = (analogRead(ADC_VOLTAGE) * VOLTAGE_REF / 1024.0) * voltage_ratio;
-    //voltage_actual = DAMPING * voltage_actual + ( 1.0f - DAMPING ) * fval;
-    voltage_actual = fval;
+void read_voltage( void )
+{
+	uint16_t ui16Volt=0;
+
+
+	for( uint8_t i=0; i<8; i++ ) ui16Volt += analogRead(ADC_VOLTAGE);
+	ui16Volt >>= 3;
+
+	voltage_actual = (float)(ui16Volt) / 1024.0 * VOLTAGE_REF * voltage_ratio;
+
     if (voltage_actual <= MIN_VOLTAGE2)
     	Buzzer.vsetStatus( BUZZER_ALARM );
     else if (voltage_actual <= MIN_VOLTAGE1)
@@ -1133,59 +1139,59 @@ void clear_eeprom() {
 
 #if defined(GHETTO_DEBUG)
 void debug() {
-	SerialDebug.print("mem ");
+	DEBUG_SERIAL.print("mem ");
        //int freememory = freeMem();
-       //SerialDebug.println(freememory);
-	SerialDebug.print("activ:");
-	SerialDebug.println(current_activity);
-	SerialDebug.print("conftelem:");
-	SerialDebug.println(configuration.telemetry);
-	SerialDebug.print("baud");
-	SerialDebug.println(configuration.baudrate);
-	SerialDebug.print("lat=");
-	SerialDebug.println(uav_lat/10000000.0,7);
-	SerialDebug.print("lon=");
-	SerialDebug.println(uav_lon/10000000.0,7);
-	SerialDebug.print("alt=");
-	SerialDebug.println(uav_alt);
-	SerialDebug.print("rel_alt=");
-	SerialDebug.println(rel_alt);
-	SerialDebug.print(uav_groundspeed);
-	SerialDebug.println(uav_groundspeed);
-	SerialDebug.print("dst=");
-	SerialDebug.println(home_dist);
-	SerialDebug.print("El:");
-	SerialDebug.println(Elevation);
-	SerialDebug.print("Be:");
-	SerialDebug.println(Bearing);
-	SerialDebug.print("H Be:");
-	SerialDebug.println(home_bearing);
-	SerialDebug.print("uav_fix_type=");
-	SerialDebug.println(uav_fix_type);
-	SerialDebug.print("uav_satellites_visible=");
-	SerialDebug.println(uav_satellites_visible);
-	SerialDebug.print("pitch:");
-	SerialDebug.println(uav_pitch);
-	SerialDebug.print("roll:");
-	SerialDebug.println(uav_roll);
-	SerialDebug.print("yaw:");
-	SerialDebug.println(uav_heading);
-	SerialDebug.print("rbat:");
-	SerialDebug.println(uav_bat);
-	SerialDebug.print("amp:");
-	SerialDebug.println(uav_amp);
-	SerialDebug.print("rssi:");
-	SerialDebug.println(uav_rssi);
-	SerialDebug.print("aspeed:");
-	SerialDebug.println(uav_airspeed);
-	SerialDebug.print("armed:");
-	SerialDebug.println(uav_arm);
-	SerialDebug.print("fs:");
-	SerialDebug.println(uav_failsafe);
-	SerialDebug.print("fmode:");
-	SerialDebug.println(uav_flightmode);
-	SerialDebug.print("armfsmode");
-	SerialDebug.println(ltm_armfsmode);
+       //DEBUG_SERIAL.println(freememory);
+	DEBUG_SERIAL.print("activ:");
+	DEBUG_SERIAL.println(current_activity);
+	DEBUG_SERIAL.print("conftelem:");
+	DEBUG_SERIAL.println(configuration.telemetry);
+	DEBUG_SERIAL.print("baud");
+	DEBUG_SERIAL.println(configuration.baudrate);
+	DEBUG_SERIAL.print("lat=");
+	DEBUG_SERIAL.println(uav_lat/10000000.0,7);
+	DEBUG_SERIAL.print("lon=");
+	DEBUG_SERIAL.println(uav_lon/10000000.0,7);
+	DEBUG_SERIAL.print("alt=");
+	DEBUG_SERIAL.println(uav_alt);
+	DEBUG_SERIAL.print("rel_alt=");
+	DEBUG_SERIAL.println(rel_alt);
+	DEBUG_SERIAL.print(uav_groundspeed);
+	DEBUG_SERIAL.println(uav_groundspeed);
+	DEBUG_SERIAL.print("dst=");
+	DEBUG_SERIAL.println(home_dist);
+	DEBUG_SERIAL.print("El:");
+	DEBUG_SERIAL.println(Elevation);
+	DEBUG_SERIAL.print("Be:");
+	DEBUG_SERIAL.println(Bearing);
+	DEBUG_SERIAL.print("H Be:");
+	DEBUG_SERIAL.println(home_bearing);
+	DEBUG_SERIAL.print("uav_fix_type=");
+	DEBUG_SERIAL.println(uav_fix_type);
+	DEBUG_SERIAL.print("uav_satellites_visible=");
+	DEBUG_SERIAL.println(uav_satellites_visible);
+	DEBUG_SERIAL.print("pitch:");
+	DEBUG_SERIAL.println(uav_pitch);
+	DEBUG_SERIAL.print("roll:");
+	DEBUG_SERIAL.println(uav_roll);
+	DEBUG_SERIAL.print("yaw:");
+	DEBUG_SERIAL.println(uav_heading);
+	DEBUG_SERIAL.print("rbat:");
+	DEBUG_SERIAL.println(uav_bat);
+	DEBUG_SERIAL.print("amp:");
+	DEBUG_SERIAL.println(uav_amp);
+	DEBUG_SERIAL.print("rssi:");
+	DEBUG_SERIAL.println(uav_rssi);
+	DEBUG_SERIAL.print("aspeed:");
+	DEBUG_SERIAL.println(uav_airspeed);
+	DEBUG_SERIAL.print("armed:");
+	DEBUG_SERIAL.println(uav_arm);
+	DEBUG_SERIAL.print("fs:");
+	DEBUG_SERIAL.println(uav_failsafe);
+	DEBUG_SERIAL.print("fmode:");
+	DEBUG_SERIAL.println(uav_flightmode);
+	DEBUG_SERIAL.print("armfsmode");
+	DEBUG_SERIAL.println(ltm_armfsmode);
 }
 #endif
 

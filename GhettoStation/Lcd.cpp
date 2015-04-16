@@ -9,6 +9,7 @@
 #include "globals.h"
 #include "common.h"
 #include "text.h"
+#include "buzzer.h"
 
 
 
@@ -57,6 +58,7 @@ extern MenuSystem displaymenu;
 extern Button right_button;
 extern Button left_button;
 extern Button enter_button;
+extern cBuzzer Buzzer;
 void retrieve_mag( void );
 
 
@@ -71,7 +73,7 @@ void read_voltage( void ); // defined in ghettostation.ino
 void init_lcdscreen( void )
 {
 #ifdef GHETTO_DEBUG
-    Serial.println("starting lcd"); 
+	DEBUG_SERIAL.println("starting lcd");
 #endif
 
   bLcdUpdate=false;
@@ -284,25 +286,25 @@ void refresh_lcd() {
         // print bar graph for battery and rssi with selected band and channel
         uint16_t x = (int)(voltage_actual / 7.4) * 100;
         uint16_t color = ST7735_GREEN;
-        //if( Buzzer.getStatus() == BUZZER_WARN ) color = ST7735_YELLOW;
-        //if( Buzzer.getStatus() == BUZZER_ALARM )color = ST7735_RED;
+        if( Buzzer.getStatus() == BUZZER_WARN ) color = ST7735_YELLOW;
+        if( Buzzer.getStatus() == BUZZER_ALARM )color = ST7735_RED;
         if(x>100)x=100;
         tft.fillRect( 10, 64 , x, 14, color );
-        tft.fillRect( 10+x, 64 , 160-x, 14, ST7735_WHITE );
+        tft.fillRect( 10+x, 64 , 140-x, 14, ST7735_WHITE );
 
         tft.setTextColor(ST7735_BLUE);
         tft.setCursor(20, 64+2);
         tft.print("Bat: ");
         tft.print(voltage_actual);
 
-        x = analogRead(ADC_RSSI) / 1024 * 100;
+        x = analogRead(ADC_RSSI_A) / 1024 * 100;
         x = x + 50;
         if(x>100)x=100;
         color = ST7735_GREEN;
         tft.fillRect( 10, 84 , x, 14, color );
-        tft.fillRect( 10+x, 84 , 160-x, 14, ST7735_WHITE );
+        tft.fillRect( 10+x, 84 , 140-x, 14, ST7735_WHITE );
         tft.setCursor(20, 84+2);
-        tft.print("RSSI: ");
+        tft.print("RSSI(A): ");
         tft.print(x);
 
 #else
