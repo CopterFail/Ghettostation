@@ -23,7 +23,6 @@
 #include "globals.h"
 #include "common.h"
 
-
 /* Arduino needs all includes in the main ino file - even when not used */
 //#include <LCD03.h>
 //#include <LiquidCrystal_I2C.h>
@@ -132,7 +131,8 @@ int Elevation;
 int servoBearing=0;
 int servoElevation=0;
 
-int current_activity = 0; // Activity status 0: Menu , 1: Track, 2: SET_HOME, 3: PAN_MINPWM, 4: PAN_MINANGLE, 5: PAN_MAXPWM,
+tActivity current_activity;
+//int current_activity = 0; // Activity status 0: Menu , 1: Track, 2: SET_HOME, 3: PAN_MINPWM, 4: PAN_MINANGLE, 5: PAN_MAXPWM,
                           // 6: PAN_MAXANGLE, 7: TILT_MINPWM, 8: TILT_MINANGLE, 9: TILT_MAXPWM, 10: TILT_MAXANGLE, 11: TEST_SERVO, 12: SET_RATE
 boolean gps_fix      = false;
 boolean btholdstate  = false;
@@ -172,17 +172,12 @@ cRX5808 RX5808;
 HMC5883L compass;
 #endif
 
-
 // local function prototypes
 void attach_servo(Servo &s, int p, int min, int max);
 void detach_servo(Servo &s);
 template <class T> int EEPROM_write(int ee, const T& value);
 template <class T> int EEPROM_read(int ee, T& value);
 void clear_eeprom();
-
-
-
-
 
 //#################################### SETUP LOOP ####################################################
 
@@ -277,7 +272,7 @@ while( OSD_SERIAL.available() ){
     }
     if (loop50hz.check() == 1) {
         //update servos
-        if (current_activity == 1) {
+        if (current_activity == ActTrack) {
             if((home_dist / 100) > DONTTRACKUNDER) {
                 servoPathfinder(Bearing,Elevation); // refresh servo 
             }
@@ -296,27 +291,27 @@ void check_activity() {
         gps_fix = false;
     switch (current_activity) 
     {
-        case 0:             //MENU
+        case ActMenu:             //MENU
                 Bearing = 0; Elevation = DEFAULTELEVATION;   
                 lcddisp_menu();
                 if (enter_button.holdTime() >= 1000 && enter_button.held()) { //long press 
                     displaymenu.back();
                 }
                 break;
-        case 1:            //TRACK
+        case ActTrack:            //TRACK
                 if ((!home_pos) || (!home_bear)) {  // check if home is set before start tracking
                     Bearing = 0; Elevation = 0;       
-                    current_activity = 2;             // set bearing if not set.
+                    current_activity = ActSetHome;             // set bearing if not set.
                 } else if (home_bear) {
                     antenna_tracking();
                     lcddisp_tracking();
                     if (enter_button.holdTime() >= 700 && enter_button.held()) { //long press 
-                        current_activity = 0;
+                        current_activity = ActMenu;
                         //telemetry_off();
                     }
                 }
                 break;
-        case 2:            //SET HOME
+        case ActSetHome:            //SET HOME
                 if (!home_pos) 
                     lcddisp_sethome();
                 else if (home_pos) {
@@ -327,10 +322,10 @@ void check_activity() {
                         lcddisp_homeok();
                 }
                 if (enter_button.holdTime() >= 700 && enter_button.held()) { //long press 
-                    current_activity = 0;
+                    current_activity = ActMenu;
                 }
                 break;
-        case 3:             //PAN_MINPWM
+        case ActPanMinPwm:             //PAN_MINPWM
                 servoconf_tmp[0] = config_servo(1, 1, servoconf_tmp[0] );                
                 if (servoconf_tmp[0] != servoconfprev_tmp[0]) {
                     detach_servo(pan_servo);
@@ -345,20 +340,20 @@ void check_activity() {
                     detach_servo(pan_servo);
                     attach_servo(pan_servo, PAN_SERVOPIN, configuration.pan_minpwm, configuration.pan_maxpwm);
                     move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
-                    current_activity=0;
+                    current_activity=ActMenu;
                 }
                 break;
-        case 4:             //PAN_MINANGLE
+        case ActPanMinAngle:             //PAN_MINANGLE
                 configuration.pan_minangle = config_servo(1, 2, configuration.pan_minangle);
                 pan_servo.writeMicroseconds(configuration.pan_minpwm);
                 //pan_servo.write(0);
                 if (enter_button.holdTime() >= 700 && enter_button.held()) {//long press
                     EEPROM_write(config_bank[int(current_bank)], configuration);
                     move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
-                    current_activity=0;
+                    current_activity=ActMenu;
                 }
                 break;
-        case 5:             //PAN_MAXPWM
+        case ActPanMaxPwm:             //PAN_MAXPWM
             servoconf_tmp[1] = config_servo(1, 3, servoconf_tmp[1] );
             if (servoconf_tmp[1] != servoconfprev_tmp[1]) {
                 detach_servo(pan_servo);
@@ -373,21 +368,21 @@ void check_activity() {
                 detach_servo(pan_servo);
                 attach_servo(pan_servo, PAN_SERVOPIN, configuration.pan_minpwm, configuration.pan_maxpwm);
                 move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
             
-        case 6:             //PAN_MAXANGLE
+        case ActPanMaxAngle:             //PAN_MAXANGLE
             configuration.pan_maxangle = config_servo(1, 4, configuration.pan_maxangle );
             pan_servo.writeMicroseconds(configuration.pan_maxpwm);
             //pan_servo.write(180);
              if (enter_button.holdTime() >= 700 && enter_button.held()) {   //long press
                 EEPROM_write(config_bank[int(current_bank)], configuration);
                 move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
-        case 7:             //"TILT_MINPWM"
+        case ActTiltMinPwm:             //"TILT_MINPWM"
             servoconf_tmp[2] = config_servo(2, 1, servoconf_tmp[2] );
             if (servoconf_tmp[2] != servoconfprev_tmp[2]) {
                 detach_servo(tilt_servo);
@@ -402,20 +397,20 @@ void check_activity() {
                 detach_servo(tilt_servo);
             attach_servo(tilt_servo,TILT_SERVOPIN, configuration.tilt_minpwm, configuration.tilt_maxpwm);
                 move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);;
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
-        case 8:             //TILT_MINANGLE
+        case ActTiltMinAngle:             //TILT_MINANGLE
             configuration.tilt_minangle = config_servo(2, 2, configuration.tilt_minangle ); 
             tilt_servo.writeMicroseconds(configuration.tilt_minpwm);
             //tilt_servo.write(0);
             if (enter_button.holdTime() >= 700 && enter_button.held()) {//long press
                 EEPROM_write(config_bank[int(current_bank)], configuration);
                 move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
-        case 9:             //"TILT_MAXPWM"
+        case ActTiltMaxPwm:             //"TILT_MAXPWM"
             servoconf_tmp[3] = config_servo(2, 3, servoconf_tmp[3] );
             if (servoconf_tmp[3] != servoconfprev_tmp[3]) {
                 detach_servo(tilt_servo);
@@ -430,44 +425,44 @@ void check_activity() {
                 detach_servo(tilt_servo);
             attach_servo(tilt_servo,TILT_SERVOPIN, configuration.tilt_minpwm, configuration.tilt_maxpwm);
                 move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
-        case 10:                //TILT_MAXANGLE
+        case ActTiltMaxAngle:                //TILT_MAXANGLE
             configuration.tilt_maxangle = config_servo(2, 4, configuration.tilt_maxangle );
             tilt_servo.writeMicroseconds(configuration.tilt_maxpwm);
             //tilt_servo.write(180);
             if (enter_button.holdTime() >= 700 && enter_button.held()) {//long press
                 EEPROM_write(config_bank[int(current_bank)], configuration);
                 move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
-        case 11:               //TEST_SERVO
+        case ActTestServo:               //TEST_SERVO
             test_servos();
             if (enter_button.holdTime() >= 700 && enter_button.held()) {//long press
-                current_activity=0;
+                current_activity=ActMenu;
                 test_servo_cnt = 360;
                 test_servo_step = 1;
                 servoPathfinder(0,0);
             }
             break;
         
-        case 12:                //Configure Telemetry
+        case ActSetTelemetrie:                //Configure Telemetry
             lcddisp_telemetry();
             if (enter_button.holdTime() >= 700 && enter_button.held()) { //long press
                 EEPROM_write(config_bank[int(current_bank)], configuration);
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
-        case 13:                //Configure Baudrate
+        case ActSetBaud:                //Configure Baudrate
             lcddisp_baudrate();
             if (enter_button.holdTime() >= 700 && enter_button.held()) { //long press
                 EEPROM_write(config_bank[int(current_bank)], configuration);
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
-        case 14:                //Change settings bank
+        case ActSetBank:                //Change settings bank
             lcddisp_bank();
             if (enter_button.holdTime() >= 700 && enter_button.held()) { //long press
                 EEPROM.write(0,current_bank);
@@ -477,30 +472,30 @@ void check_activity() {
                 servoconf_tmp[2] = configuration.tilt_minpwm;
                 servoconf_tmp[3] = configuration.tilt_maxpwm;
                 home_sent = 0;
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
-        case 15:                //Configure OSD
+        case ActSetOsd:                //Configure OSD
             lcddisp_osd();
             if (enter_button.holdTime() >= 700 && enter_button.held()) { //long press
                 EEPROM_write(config_bank[int(current_bank)], configuration);
                 home_sent = 0; // force resend an OFrame for osd update
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;      
-        case 16:                //Configure bearing method
+        case ActSetBearing:                //Configure bearing method
             lcddisp_bearing_method();
             if (enter_button.holdTime() >= 700 && enter_button.held()) { //long press
                 EEPROM_write(config_bank[int(current_bank)], configuration);
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
-        case 17:               //Configure voltage multiplier
+        case ActSetVoltage:               //Configure voltage multiplier
             lcddisp_voltage_ratio();
             if (enter_button.holdTime() >= 700 && enter_button.held()) { //long press
                 configuration.voltage_ratio = (uint16_t)(voltage_ratio * 100.0f);
                 EEPROM_write(config_bank[int(current_bank)], configuration);
-                current_activity=0;
+                current_activity=ActMenu;
             }
             break;
     }         
@@ -512,10 +507,10 @@ void enterButtonReleaseEvents(Button &btn)
  {
     //DEBUG_SERIAL.println(current_activity);
     if ( enter_button.holdTime() < 700 ) { // normal press    
-        if ( current_activity == 0 ) { //button action depends activity state
+        if ( current_activity == ActMenu ) { //button action depends activity state
             displaymenu.select();
         }
-        else if ( current_activity == 2 ) {
+        else if ( current_activity == ActSetHome ) {
             if ((gps_fix) && (!home_pos)) {
                 //saving home position
                 home_lat = uav_lat;
@@ -546,7 +541,7 @@ void enterButtonReleaseEvents(Button &btn)
             }
             else if ((gps_fix) && (home_pos) && (home_bear)) {
               // START TRACKING 
-              current_activity = 1;
+              current_activity = ActTrack;
             }
         }
         
@@ -559,29 +554,29 @@ void enterButtonReleaseEvents(Button &btn)
 void leftButtonReleaseEvents(Button &btn)
 {
     if ( left_button.holdTime() < 700 ) {
-        if (current_activity==0) {
+        if (current_activity==ActMenu) {
             displaymenu.prev();
         }       
-        else if ( current_activity != 0 && current_activity != 1 && current_activity != 2 ) {
+        else if ( current_activity != ActMenu && current_activity != ActTrack && current_activity != ActSetHome ) {
               //We're in a setting area: Left button decrase current value.
               switch (current_activity) {
-                  case 3:   servoconf_tmp[0]--;            break;
-                  case 4:   configuration.pan_minangle--;  break;
-                  case 5:   servoconf_tmp[1]--;            break;
-                  case 6:   configuration.pan_maxangle--;  break;
-                  case 7:   servoconf_tmp[2]--;            break;
-                  case 8:   configuration.tilt_minangle--; break;
-                  case 9:   servoconf_tmp[3]--;            break;
-                  case 10:  configuration.tilt_maxangle--; break;
-                  case 12:  if (configuration.telemetry > 0) configuration.telemetry -= 1;  break; 
-                  case 13:  if (configuration.baudrate > 0)  configuration.baudrate -= 1;   break;
-                  case 14:  if (current_bank > 0) current_bank -= 1; else current_bank = 3; break;
-                  case 15:  if (configuration.osd_enabled == 0) configuration.osd_enabled = 1; else configuration.osd_enabled = 0;    break;
-                  case 16:  if (configuration.bearing_method > 1) configuration.bearing_method -= 1; else configuration.bearing_method = 4; break;
-                  case 17:  if (voltage_ratio >= 1.0) voltage_ratio -= 0.01; break;
+                  case ActPanMinPwm:   		servoconf_tmp[0]--;            break;
+                  case ActPanMinAngle:		configuration.pan_minangle--;  break;
+                  case ActPanMaxPwm:		servoconf_tmp[1]--;            break;
+                  case ActPanMaxAngle:		configuration.pan_maxangle--;  break;
+                  case ActTiltMinPwm:		servoconf_tmp[2]--;            break;
+                  case ActTiltMinAngle:		configuration.tilt_minangle--; break;
+                  case ActTiltMaxPwm:		servoconf_tmp[3]--;            break;
+                  case ActTiltMaxAngle:		configuration.tilt_maxangle--; break;
+                  case ActSetTelemetrie:	if (configuration.telemetry > 0) configuration.telemetry -= 1;  break;
+                  case ActSetBaud:  		if (configuration.baudrate > 0)  configuration.baudrate -= 1;   break;
+                  case ActSetBank:  		if (current_bank > 0) current_bank -= 1; else current_bank = 3; break;
+                  case ActSetOsd:  			if (configuration.osd_enabled == 0) configuration.osd_enabled = 1; else configuration.osd_enabled = 0;    break;
+                  case ActSetBearing:  		if (configuration.bearing_method > 1) configuration.bearing_method -= 1; else configuration.bearing_method = 4; break;
+                  case ActSetVoltage:  		if (voltage_ratio >= 1.0) voltage_ratio -= 0.01; break;
              }                              
         }
-        else if (current_activity==2) {
+        else if (current_activity==ActSetHome) {
                 if (configuration.bearing_method == 2) {      
                     if (home_pos && !home_bear) {
                         home_bearing--;
@@ -589,10 +584,10 @@ void leftButtonReleaseEvents(Button &btn)
                     }
                 }    
                 if (gps_fix && home_pos && home_bear) {
-                    current_activity = 0;
+                    current_activity = ActMenu;
                 }
         }
-        else if (current_activity==1 && home_pos && home_bear)
+        else if (current_activity==ActTrack && home_pos && home_bear)
             home_bearing--;  
     }
 }
@@ -602,29 +597,29 @@ void rightButtonReleaseEvents(Button &btn)
 {
     if ( right_button.holdTime() < 700 ) {
      
-        if (current_activity==0) {
+        if (current_activity==ActMenu) {
             displaymenu.next();
         }
-        else if ( current_activity != 0 && current_activity != 1 && current_activity != 2 ) {
+        else if ( current_activity != ActMenu && current_activity != ActTrack && current_activity != ActSetHome ) {
             //We're in a setting area: Right button decrase current value.
             switch (current_activity) {
-                case 3:  servoconf_tmp[0]++;            break;
-                case 4:  configuration.pan_minangle++;  break;
-                case 5:  servoconf_tmp[1]++;            break;
-                case 6:  configuration.pan_maxangle++;  break;
-                case 7:  servoconf_tmp[2]++;            break;
-                case 8:  configuration.tilt_minangle++; break;
-                case 9:  servoconf_tmp[3]++;            break;
-                case 10: configuration.tilt_maxangle++; break;
-                case 12: if (configuration.telemetry < 6) configuration.telemetry += 1;  break;
-                case 13: if (configuration.baudrate  < 7) configuration.baudrate += 1;   break; 
-                case 14: if (current_bank < 3) current_bank += 1; else current_bank = 0; break;  
-                case 15: if (configuration.osd_enabled == 0) configuration.osd_enabled = 1; else configuration.osd_enabled = 0;    break;
-                case 16: if (configuration.bearing_method < 5) configuration.bearing_method += 1; else configuration.bearing_method = 1; break;
-                case 17: voltage_ratio += 0.01; break;
+                case ActPanMinPwm:  servoconf_tmp[0]++;            break;
+                case ActPanMinAngle:  configuration.pan_minangle++;  break;
+                case ActPanMaxPwm:  servoconf_tmp[1]++;            break;
+                case ActPanMaxAngle:  configuration.pan_maxangle++;  break;
+                case ActTiltMinPwm:  servoconf_tmp[2]++;            break;
+                case ActTiltMinAngle:  configuration.tilt_minangle++; break;
+                case ActTiltMaxPwm:  servoconf_tmp[3]++;            break;
+                case ActTiltMaxAngle: configuration.tilt_maxangle++; break;
+                case ActSetTelemetrie: if (configuration.telemetry < 6) configuration.telemetry += 1;  break;
+                case ActSetBaud: if (configuration.baudrate  < 7) configuration.baudrate += 1;   break;
+                case ActSetBank: if (current_bank < 3) current_bank += 1; else current_bank = 0; break;
+                case ActSetOsd: if (configuration.osd_enabled == 0) configuration.osd_enabled = 1; else configuration.osd_enabled = 0;    break;
+                case ActSetBearing: if (configuration.bearing_method < 5) configuration.bearing_method += 1; else configuration.bearing_method = 1; break;
+                case ActSetVoltage: voltage_ratio += 0.01; break;
             }
         }
-        else if (current_activity==2) {
+        else if (current_activity==ActSetHome) {
             if (configuration.bearing_method == 2) { 
                 if (home_pos && !home_bear) {
                     home_bearing++;
@@ -638,7 +633,7 @@ void rightButtonReleaseEvents(Button &btn)
                 home_sent = 0;
             }
         }
-        else if (current_activity==1 && home_pos && home_bear) {
+        else if (current_activity==ActTrack && home_pos && home_bear) {
              home_bearing++;
         }
     }
@@ -680,73 +675,73 @@ void init_menu() {
 //menu item callback functions
 
 void screen_tracking(MenuItem* p_menu_item) {
-    current_activity = 1;
+    current_activity = ActTrack;
 }
 
 void screen_sethome(MenuItem* p_menu_item) {
-    current_activity = 2;
+    current_activity = ActSetHome;
 }
 
 void configure_pan_minpwm(MenuItem* p_menu_item) {
-    current_activity = 3;
+    current_activity = ActPanMinPwm;
 }
 
 void configure_pan_minangle(MenuItem* p_menu_item) {
-    current_activity = 4;
+    current_activity = ActPanMinAngle;
 }
 
 void configure_pan_maxpwm(MenuItem* p_menu_item) {
-    current_activity = 5;
+    current_activity = ActPanMaxPwm;
 }
 
 void configure_pan_maxangle(MenuItem* p_menu_item) {
-    current_activity = 6;
+    current_activity = ActPanMaxAngle;
 }
 
 void configure_tilt_minpwm(MenuItem* p_menu_item) {
-    current_activity = 7;
+    current_activity = ActTiltMinPwm;
 }
 
 void configure_tilt_minangle(MenuItem* p_menu_item) {
-    current_activity = 8;
+    current_activity = ActTiltMinAngle;
 }
 
 void configure_tilt_maxpwm(MenuItem* p_menu_item) {
-    current_activity = 9;
+    current_activity = ActTiltMaxPwm;
 }
 
 void configure_tilt_maxangle(MenuItem* p_menu_item) {
-    current_activity = 10;
+    current_activity = ActTiltMaxAngle;
 }
 
 void configure_test_servo(MenuItem* p_menu_item) {  
-    current_activity = 11;
+    current_activity = ActTestServo;
 }
 
 void configure_telemetry(MenuItem* p_menu_item) {
-    current_activity = 12;
+    current_activity = ActSetTelemetrie;
 }
 
 void configure_baudrate(MenuItem* p_menu_item) {
-    current_activity = 13;
+    current_activity = ActSetBaud;
 }
 
 void screen_bank(MenuItem* p_menu_item) {
-    current_activity = 14;
+    current_activity = ActSetBank;
 }
 
 #ifdef OSD_OUTPUT
 void configure_osd(MenuItem* p_menu_item) {
-    current_activity = 15;
+    current_activity = ActSetOsd;
 }
 #endif
 
 void configure_bearing_method(MenuItem* p_menu_item) {
-    current_activity = 16;
+    current_activity = ActSetBearing;
 }
 
 void configure_voltage_ratio(MenuItem* p_menu_item) {
-    current_activity = 17;
+    current_activity = ActSetVoltage;
 }
 
 //######################################## TELEMETRY FUNCTIONS #############################################
@@ -974,7 +969,7 @@ void test_servos() {
             else {
                 // finished
                 test_servo_step = 1;
-                current_activity = 0;
+                current_activity = ActMenu;
                 servoPathfinder(0,0);             
             }
             break;

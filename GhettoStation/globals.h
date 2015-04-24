@@ -58,8 +58,14 @@ extern int Elevation;
 extern int servoBearing;
 extern int servoElevation;
 
-extern int current_activity; // Activity status 0: Menu , 1: Track, 2: SET_HOME, 3: PAN_MINPWM, 4: PAN_MINANGLE, 5: PAN_MAXPWM,
+typedef enum tActivity { ActMenu=0, ActTrack, ActSetHome,
+	ActPanMinPwm, ActPanMinAngle, ActPanMaxPwm,	ActPanMaxAngle,
+	ActTiltMinPwm, ActTiltMinAngle, ActTiltMaxPwm, ActTiltMaxAngle,
+	ActTestServo, ActSetTelemetrie,	ActSetBaud, ActSetBank, ActSetOsd, ActSetBearing, ActSetVoltage };
+//extern int current_activity; // Activity status 0: Menu , 1: Track, 2: SET_HOME, 3: PAN_MINPWM, 4: PAN_MINANGLE, 5: PAN_MAXPWM,
                           // 6: PAN_MAXANGLE, 7: TILT_MINPWM, 8: TILT_MINANGLE, 9: TILT_MAXPWM, 10: TILT_MAXANGLE, 11: TEST_SERVO, 12: SET_RATE
+extern tActivity current_activity;
+
 extern boolean gps_fix;
 extern boolean btholdstate;
 extern boolean telemetry_ok;
