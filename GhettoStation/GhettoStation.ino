@@ -126,10 +126,10 @@ uint32_t home_dist;
 uint8_t home_sent = 0;
 
 //tracking
-int Bearing;
-int Elevation;
-int servoBearing=0;
-int servoElevation=0;
+int16_t Bearing;
+int16_t Elevation;
+int16_t servoBearing=0;
+int16_t servoElevation=0;
 
 tActivity current_activity;
 //int current_activity = 0; // Activity status 0: Menu , 1: Track, 2: SET_HOME, 3: PAN_MINPWM, 4: PAN_MINANGLE, 5: PAN_MAXPWM,
@@ -141,8 +141,8 @@ boolean home_pos     = false;
 boolean home_bear    = false;
 
 //servo temp configuration before saving
-int servoconf_tmp[4];
-int servoconfprev_tmp[4];
+int16_t servoconf_tmp[4];
+int16_t servoconfprev_tmp[4];
 uint8_t test_servo_step = 1;
 uint16_t test_servo_cnt = 360;
 //baudrate selection

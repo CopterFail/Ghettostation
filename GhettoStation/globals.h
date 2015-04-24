@@ -8,6 +8,12 @@
 #ifndef GLOBALS_H_
 #define GLOBALS_H_
 
+// type definitions
+typedef enum tActivity { ActMenu=0, ActTrack, ActSetHome,
+	ActPanMinPwm, ActPanMinAngle, ActPanMaxPwm,	ActPanMaxAngle,
+	ActTiltMinPwm, ActTiltMinAngle, ActTiltMaxPwm, ActTiltMaxAngle,
+	ActTestServo, ActSetTelemetrie,	ActSetBaud, ActSetBank, ActSetOsd, ActSetBearing, ActSetVoltage };
+
 // declaration of all the global variables used by the station
 
 //Telemetry variables
@@ -53,17 +59,11 @@ extern uint32_t home_dist;
 extern uint8_t home_sent;
 
 //tracking
-extern int Bearing;
-extern int Elevation;
-extern int servoBearing;
-extern int servoElevation;
+extern int16_t Bearing;
+extern int16_t Elevation;
+extern int16_t servoBearing;
+extern int16_t servoElevation;
 
-typedef enum tActivity { ActMenu=0, ActTrack, ActSetHome,
-	ActPanMinPwm, ActPanMinAngle, ActPanMaxPwm,	ActPanMaxAngle,
-	ActTiltMinPwm, ActTiltMinAngle, ActTiltMaxPwm, ActTiltMaxAngle,
-	ActTestServo, ActSetTelemetrie,	ActSetBaud, ActSetBank, ActSetOsd, ActSetBearing, ActSetVoltage };
-//extern int current_activity; // Activity status 0: Menu , 1: Track, 2: SET_HOME, 3: PAN_MINPWM, 4: PAN_MINANGLE, 5: PAN_MAXPWM,
-                          // 6: PAN_MAXANGLE, 7: TILT_MINPWM, 8: TILT_MINANGLE, 9: TILT_MAXPWM, 10: TILT_MAXANGLE, 11: TEST_SERVO, 12: SET_RATE
 extern tActivity current_activity;
 
 extern boolean gps_fix;
@@ -73,8 +73,8 @@ extern boolean home_pos;
 extern boolean home_bear;
 
 //servo temp configuration before saving
-extern int servoconf_tmp[4];
-extern int servoconfprev_tmp[4];
+extern int16_t servoconf_tmp[4];
+extern int16_t servoconfprev_tmp[4];
 extern uint8_t test_servo_step;
 extern uint16_t test_servo_cnt;
 //baudrate selection
@@ -83,18 +83,18 @@ extern long baudrates[8];
 //Configuration stored in EEprom
 struct config_t // 28 bytes
 {
-    int config_crc;
-    int pan_minpwm;
-    int pan_minangle;
-    int pan_maxpwm;
-    int pan_maxangle;
-    int tilt_minpwm;
-    int tilt_minangle;
-    int tilt_maxpwm;
-    int tilt_maxangle;
-    int baudrate;
-    int telemetry;
-    int bearing;
+    int16_t config_crc;
+    int16_t pan_minpwm;
+    int16_t pan_minangle;
+    int16_t pan_maxpwm;
+    int16_t pan_maxangle;
+    int16_t tilt_minpwm;
+    int16_t tilt_minangle;
+    int16_t tilt_maxpwm;
+    int16_t tilt_maxangle;
+    int16_t baudrate;
+    int16_t telemetry;
+    int16_t bearing;
     uint8_t osd_enabled;
     uint8_t bearing_method;
     uint16_t voltage_ratio;
