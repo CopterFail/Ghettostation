@@ -52,9 +52,9 @@
 #ifdef TEENSY31
   #define PAN_SERVOPIN     23	//PWM Pin for pan servo
   #define TILT_SERVOPIN    22   //PWM Pin for tilt ervo
-  #define LEFT_BUTTON_PIN   3   //Any Digital pin
-  #define RIGHT_BUTTON_PIN  2   //Any Digital pin
-  #define ENTER_BUTTON_PIN  4   //Any Digital pin
+  #define DOWN_BUTTON_PIN   2   //Any Digital pin, blue
+  #define UP_BUTTON_PIN  	4   //Any Digital pin, green
+  #define ENTER_BUTTON_PIN  3   //Any Digital pin, red
   #define ADC_VOLTAGE      15   //ADC pin used for voltage reading
   #define BUZZER_PIN        6   //(PH5) Any PWM pin ((add a 100-150 ohm resistor between buzzer & ground)
 
@@ -71,8 +71,8 @@
   #define PIN_RX_SPI_CLK	24 // reserved for RX5808 module with SPI mod, pin is smd pad, CS2
   #define PIN_RX_SPI_DATA	25 // reserved for RX5808 module with SPI mod, pin is smd pad, CS0
   #define PIN_RX_SPI_LE		26 // reserved for RX5808 module with SPI mod, pin is smd pad, CS1
-  #define ADC_RSSI_A		A16// reserved for RX5808 module, pin is smd pad (A16 / 27)
-  #define ADC_RSSI_B		A17 // reserved for RX5808 module, pin is smd pad (A17 / 28)
+  #define ADC_RSSI_A		27 //A16// reserved for RX5808 module, pin is smd pad (A16 / 27)
+  #define ADC_RSSI_B		28 //A17 // reserved for RX5808 module, pin is smd pad (A17 / 28)
   #define PIN_ENABLE_RX_A	32 // reserved for RX5808 module, pin is smd pad
   #define PIN_ENABLE_RX_B	33 // reserved for RX5808 module, pin is smd pad
 

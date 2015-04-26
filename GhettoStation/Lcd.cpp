@@ -55,9 +55,9 @@
 #include <Button.h>
 
 extern MenuSystem displaymenu;
-extern Button right_button;
-extern Button left_button;
-extern Button enter_button;
+extern Button buttonUp;
+extern Button buttonDown;
+extern Button buttonEnter;
 extern cBuzzer Buzzer;
 void retrieve_mag( void );
 
@@ -297,8 +297,8 @@ void refresh_lcd() {
         tft.print("Bat: ");
         tft.print(voltage_actual);
 
-        x = analogRead(ADC_RSSI_A) / 1024 * 100;
-        x = x + 50;
+        x = analogRead(ADC_RSSI_A) / 10; //1024 * 100;
+        //x = 50;
         if(x>100)x=100;
         color = ST7735_GREEN;
         tft.fillRect( 10, 84 , x, 14, color );
@@ -413,13 +413,13 @@ void lcddisp_sethome() {
 void lcddisp_setbearing() {
     switch (configuration.bearing_method) {
         case 2:
-            if (right_button.holdTime() >= 700 && right_button.isPressed() ) {
+            if (buttonUp.holdTime() >= 700 && buttonUp.isPressed() ) {
                 home_bearing+=10;
                 if (home_bearing > 359) 
                     home_bearing = 0;
                 delay(500);
                 }
-            else if ( left_button.holdTime() >= 700 && left_button.isPressed() ) {
+            else if ( buttonDown.holdTime() >= 700 && buttonDown.isPressed() ) {
                 home_bearing-=10;
                 if (home_bearing < 0) 
                     home_bearing = 359;
@@ -713,11 +713,11 @@ void lcddisp_bearing_method() {
 
 void lcddisp_voltage_ratio() {
     read_voltage();
-    if (right_button.holdTime() >= 700 && right_button.isPressed() ) {
+    if (buttonUp.holdTime() >= 700 && buttonUp.isPressed() ) {
               voltage_ratio += 0.1;
               delay(500);
         }
-        else if ( left_button.holdTime() >= 700 && left_button.isPressed() ) {
+        else if ( buttonDown.holdTime() >= 700 && buttonDown.isPressed() ) {
               voltage_ratio -= 0.1;
               delay(500);
         }
@@ -771,11 +771,11 @@ void lcddisp_testservo() {
 int config_servo(int servotype, int valuetype, int value ) {
     // servo configuration screen function return configured value
         //check long press left right
-        if (right_button.holdTime() >= 700 && right_button.isPressed() ) {
+        if (buttonUp.holdTime() >= 700 && buttonUp.isPressed() ) {
               value+=20;
               delay(500);
         }
-        else if ( left_button.holdTime() >= 700 && left_button.isPressed() ) {
+        else if ( buttonDown.holdTime() >= 700 && buttonDown.isPressed() ) {
               value-=20;
               delay(500);
         }
