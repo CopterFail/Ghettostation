@@ -10,55 +10,43 @@
 #include "common.h"
 #include "text.h"
 #include "buzzer.h"
+#include "rx5808.h"
 
 
 
 //################################### SETTING OBJECTS ###############################################
 // Set the pins on the I2C chip used for LCD connections:
 // addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
-#ifdef LCD03I2C
-  #include <LCD03.h>
-  LCD03 LCD(I2CADRESS);
-#endif
-#ifdef LCDLCM1602
-  #include <LiquidCrystal_I2C.h>
-  LiquidCrystal_I2C LCD(I2CADRESS, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  //   HobbyKing IIC/I2C/TWI Serial 2004 20x4, LCM1602 IIC A0 A1 A2 & YwRobot Arduino LCM1602 IIC V1
-#endif
-#ifdef LCDGYLCD
-  #include <LiquidCrystal_I2C.h>
-  LiquidCrystal_I2C LCD(I2CADRESS, 4, 5, 6, 0, 1, 2, 3, 7, NEGATIVE);  //   Arduino-IIC-LCD GY-LCD-V1
-#endif
-#ifdef GLCDEnable
-  #include <glcd.h>
-  #include "fonts/SystemFont5x7.h"
-#endif
 
-#ifdef OLEDLCD
-  #include <Adafruit_GFX.h>
-  #include <Adafruit_SSD1306.h>
-  #define OLED_RESET 4
-  Adafruit_SSD1306 display(OLED_RESET);
-#endif
-
-#ifdef LCDST7735
-  #include <Adafruit_GFX.h>    // Core graphics library
-  //#include <Adafruit_mfGFX.h>    // Core graphics library
-  #include <Adafruit_ST7735.h> // Hardware-specific library
-  #include <SPI.h>
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7735.h> // Hardware-specific library
+#include <SPI.h>
 
   Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_MOSI, PIN_SCLK, PIN_RST);
   //Adafruit_ST7735 tft = Adafruit_ST7735(PIN_CS, PIN_DC, PIN_RST); // hardware spi
-#endif
-
 
 #include <MenuSystem.h>
 #include <Button.h>
+
+// Assign human-readable names to some common 16-bit color values:
+#define	BLACK   0x0000
+#define	BLUE    0x001F
+#define	K_BLUE  0x0010
+#define	RED     0xF800
+#define	GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
 
 extern MenuSystem displaymenu;
 extern Button buttonUp;
 extern Button buttonDown;
 extern Button buttonEnter;
+
 extern cBuzzer Buzzer;
+extern cRX5808 RX5808;
+
 void retrieve_mag( void );
 
 
@@ -66,9 +54,104 @@ char lcd_line1[21];
 char lcd_line2[21];
 char lcd_line3[21];
 char lcd_line4[21];
-static bool bLcdUpdate;
+static bool bMenuUpdate;
+static bool bDataUpdate;
 
 void read_voltage( void ); // defined in ghettostation.ino
+
+
+
+void vShowSoftkeys( char *text1, char *text2, char *text3 )
+{
+	const uint8_t w=53;	 // 10 chars?
+	int8_t x;
+	tft.setTextColor( BLACK );
+	tft.setTextSize(1);
+	tft.fillRect( 0, 118, w, 10, BLUE );
+	x = ( w - strlen(text1)*6 ) / 2;
+	tft.setCursor( x, 118+1 );
+	tft.print(text1);
+	tft.fillRect( w, 118, w, 10, RED );
+	x = ( w - strlen(text2)*6 ) / 2;
+	tft.setCursor( w+x, 118+1 );
+	tft.print(text2);
+	tft.fillRect( w+w, 118, w, 10, GREEN );
+	x = ( w - strlen(text3)*6 ) / 2;
+	tft.setCursor( w+w+x, 118+1 );
+	tft.print(text3);
+}
+
+void vShowBar( uint8_t slot, uint8_t value )
+{
+	tft.setTextColor( BLACK );
+	tft.setTextSize(1);
+	tft.fillRect( 0, 64+10*slot, value, 10, GREEN );
+	tft.fillRect( value, 64+10*slot, 160-value , 10, BLACK );
+	tft.setCursor( 10, 64+10*slot+1 );
+	tft.print(value);
+	tft.print("%");
+	//vShowSoftkeys( "","EXIT","" );
+}
+
+void vShowSpectrum( uint8_t *data, uint8_t channel )
+{
+	uint8_t y;
+	uint16_t color;
+	tft.fillRect( 0, 64, 160, 64, BLACK );
+	for( uint8_t i=1U; i<33U; i++ )
+	{
+		if( i==channel )
+			color = RED;
+		else
+			color=GREEN;
+		y = *data >> 1;
+		tft.fillRect( i<<2, 115-y, 4, y, color );
+		data++;
+	}
+	tft.setTextColor( RED );
+	tft.setTextSize(2);
+	tft.setCursor( 134, 86 );
+	tft.print(channel);
+	vShowSoftkeys( "PREV","EXIT","NEXT" );
+}
+
+void showMenu( void )
+{
+  if( !bMenuUpdate ) return;
+  // Display the menu
+  Menu const* cp_menu = displaymenu.get_current_menu();
+
+  tft.fillScreen(BLACK);
+  tft.setTextColor(WHITE);
+  tft.setCursor(0, 0);
+  tft.setTextSize(2);
+  tft.println(cp_menu->get_name()); //Current menu name
+  tft.setTextColor(YELLOW);
+  tft.setTextSize(1);
+  tft.println("");
+
+  MenuComponent const* cp_menu_sel = cp_menu->get_selected();
+  for (int i = 0; i < cp_menu->get_num_menu_components(); ++i)
+  {
+    MenuComponent const* cp_m_comp = cp_menu->get_menu_component(i);
+
+    if (cp_menu_sel == cp_m_comp)
+	{
+		tft.setTextColor(GREEN);
+		tft.setTextSize(2);
+	}
+    tft.println(cp_m_comp->get_name());
+	tft.setTextColor(YELLOW);
+	tft.setTextSize(1);
+  }
+  vShowSoftkeys( "DOWN","SEL/EXIT","UP" );
+  bMenuUpdate = false;
+}
+
+
+
+
+
 
 void init_lcdscreen( void )
 {
@@ -76,136 +159,31 @@ void init_lcdscreen( void )
 	DEBUG_SERIAL.println("starting lcd");
 #endif
 
-  bLcdUpdate=false;
+  bMenuUpdate=true;
+  bDataUpdate=true;
   read_voltage();
   char extract[20];
 
-#ifdef OLEDLCD
-  display.begin(SSD1306_SWITCHCAPVCC,I2CADRESS);  // initialize with the I2C addr 0x3D (for the 128x64)
-  display.display(); // show splashscreen
-  delay(2000);
-  display.clearDisplay();   // clears the screen and buffer
-  // init done
-#endif
-
-
-// init LCD
-#ifdef OLEDLCD
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0,0);
-  display.println(string_load1.copy(extract));
-  display.println(string_load2.copy(extract));
-  display.println(string_load3.copy(extract));
+  tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab
+  tft.fillScreen(ST7735_BLACK);
+  tft.setRotation(3);
+  tft.setTextSize(1); // 1=5x7, 2=10x14
+  tft.setCursor(0, 0);
+  tft.setTextColor(ST7735_WHITE);
+  tft.setTextWrap(false);
+  tft.println("01234567890123456789");
+  tft.println(string_load1.copy(extract));
+  tft.println(string_load2.copy(extract));
+  tft.println(string_load3.copy(extract));
   char currentline[21];
   char bufferV[6];
   sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
-  display.println(currentline);
-  display.display();
-  delay(2500); //delay to init lcd in time.
-  display.clearDisplay();
-#endif
+  tft.println(currentline);
+  tft.println("Scan video channels ... wait");
+  //delay(500);
 
-#ifdef GLCDEnable
-    GLCD.Init(NON_INVERTED);
-    GLCD.SelectFont(System5x7);
-    LCD.begin(20,4); // No idea why this is still needed for GLCD, but it breaks without
-    GLCD.CursorTo(0,0);
-    GLCD.println(string_load1.copy(extract));
-    GLCD.println(string_load2.copy(extract));
-    GLCD.println(string_load3.copy(extract));
-    char currentline[21];
-    char bufferV[6];
-    sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
-    GLCD.println(currentline);
-    delay(1500); //delay to init lcd in time.
-#endif
-
-#ifdef LCDST7735
-    tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab
-    tft.fillScreen(ST7735_BLACK);
-    //delay(500);
-    tft.setRotation(3);
-    tft.setTextSize(1); // 1=5x7, 2=10x14
-    tft.setCursor(0, 0);
-    tft.setTextColor(ST7735_WHITE);
-    tft.setTextWrap(false);
-    tft.println("01234567890123456789");
-    tft.println(string_load1.copy(extract));
-    tft.println(string_load2.copy(extract));
-    tft.println(string_load3.copy(extract));
-    char currentline[21];
-    char bufferV[6];
-    sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
-    tft.println(currentline);
-    delay(500);
-#endif
-#ifdef LCD03I2C
-    LCD.begin(20,4);
-        delay(20);
-    LCD.backlight();
-    	delay(250);
-    LCD.noBacklight();
-    	delay(250);
-    LCD.backlight();
-        delay(250);
-    LCD.setCursor(0,0);
-    LCD.print(string_load1.copy(extract));
-    LCD.setCursor(0,1);
-    LCD.print(string_load2.copy(extract));
-    LCD.setCursor(0,2);
-    LCD.print(string_load3.copy(extract));
-    LCD.setCursor(0,3);
-    	char currentline[21];
-    	char bufferV[6];
-    	sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
-    LCD.print(currentline);
-    	delay(1500); //delay to init lcd in time.
-#endif
-#ifdef LCDLCM1602
-    LCD.begin(20,4);
-        delay(20);
-    LCD.backlight();
-    	delay(250);
-    LCD.noBacklight();
-    	delay(250);
-    LCD.backlight();
-        delay(250);
-    LCD.setCursor(0,0);
-    LCD.print(string_load1.copy(extract));
-    LCD.setCursor(0,1);
-    LCD.print(string_load2.copy(extract));
-    LCD.setCursor(0,2);
-    LCD.print(string_load3.copy(extract));
-    LCD.setCursor(0,3);
-    	char currentline[21];
-    	char bufferV[6];
-    	sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
-    LCD.print(currentline);
-    	delay(1500); //delay to init lcd in time.
-#endif
-#ifdef LCDGYLCD
-    LCD.begin(20,4);
-        delay(20);
-    LCD.backlight();        
-    	delay(250);         
-    LCD.noBacklight();      
-    	delay(250);
-    LCD.backlight(); 
-        delay(250);
-    LCD.setCursor(0,0);
-    LCD.print(string_load1.copy(extract));
-    LCD.setCursor(0,1);
-    LCD.print(string_load2.copy(extract));
-    LCD.setCursor(0,2);
-    LCD.print(string_load3.copy(extract));
-    LCD.setCursor(0,3);
-    	char currentline[21];
-    	char bufferV[6];
-    	sprintf(currentline,"Battery: %s V", dtostrf(voltage_actual, 4, 2, bufferV));
-    LCD.print(currentline);
-    	delay(1500); //delay to init lcd in time.
-#endif
+  RX5808.vSelectReceiver(0);
+  RX5808.ui8ScanChannels(1);
 }
 
 void store_lcdline( int i, char sbuffer[20] ) {
@@ -214,28 +192,28 @@ void store_lcdline( int i, char sbuffer[20] ) {
         case 1: 
         	    if(strcmp(lcd_line1,sbuffer))
         	    {
-        	    	bLcdUpdate=true;
+        	    	bMenuUpdate=true;
         	    }
                 strcpy(lcd_line1,sbuffer);
                 break;
         case 2: 
     	    if(strcmp(lcd_line2,sbuffer))
     	    {
-    	    	bLcdUpdate=true;
+    	    	bMenuUpdate=true;
     	    }
                 strcpy(lcd_line2,sbuffer);
                 break;
         case 3: 
     	    if(strcmp(lcd_line3,sbuffer))
     	    {
-    	    	bLcdUpdate=true;
+    	    	bMenuUpdate=true;
     	    }
                 strcpy(lcd_line3,sbuffer);
                 break;
         case 4: 
     	    if(strcmp(lcd_line4,sbuffer))
     	    {
-    	    	bLcdUpdate=true;
+    	    	bMenuUpdate=true;
     	    }
                 strcpy(lcd_line4,sbuffer);
                 break;
@@ -249,79 +227,56 @@ void refresh_lcd() {
 // refreshing lcd at defined update.
 // update lines
 
-    if(!bLcdUpdate) return;
-    bLcdUpdate=false;
+    if(!bMenuUpdate) return;
+    bMenuUpdate=false;
 
-#ifdef OLEDLCD
-        display.clearDisplay();
-        display.setCursor(0,0);
-        display.println(lcd_line1);
-    	display.println(lcd_line2);
-    	display.println(lcd_line3);
-        display.println(lcd_line4);
-        display.display();
-        delay(100);
-#endif
-#ifdef GLCDEnable
-       	GLCD.CursorTo(0,0);
-	    GLCD.println(lcd_line1);
-    	GLCD.println(lcd_line2);
-    	GLCD.println(lcd_line3);
-        GLCD.println(lcd_line4);
-#endif
-#ifdef LCDST7735
-        tft.fillScreen(ST7735_BLACK);
-        tft.setTextColor(ST7735_WHITE);
-        tft.setCursor(0, 0);
-        //lcd_line1[18] = 0;	// cut to 18 char per line
-        //lcd_line2[18] = 0;
-        //lcd_line3[18] = 0;
-        //lcd_line4[18] = 0;
-        tft.println("01234567890123456789");
-        tft.println(lcd_line1);
-        tft.println(lcd_line2);
-        tft.println(lcd_line3);
-        tft.println(lcd_line4);
+    tft.fillScreen(ST7735_BLACK);
+    tft.setTextColor(ST7735_WHITE);
+    tft.setCursor(0, 0);
+    tft.println("01234567890123456789");
+    tft.println(lcd_line1);
+    tft.println(lcd_line2);
+    tft.println(lcd_line3);
+    tft.println(lcd_line4);
 
-        // print bar graph for battery and rssi with selected band and channel
-        uint16_t x = (int)(voltage_actual / 7.4) * 100;
-        uint16_t color = ST7735_GREEN;
-        if( Buzzer.getStatus() == BUZZER_WARN ) color = ST7735_YELLOW;
-        if( Buzzer.getStatus() == BUZZER_ALARM )color = ST7735_RED;
-        if(x>100)x=100;
-        tft.fillRect( 10, 64 , x, 14, color );
-        tft.fillRect( 10+x, 64 , 140-x, 14, ST7735_WHITE );
+    // print bar graph for battery and rssi with selected band and channel
+    uint16_t x = (int)(voltage_actual / 7.4) * 100;
+    uint16_t color = ST7735_GREEN;
+    if( Buzzer.getStatus() == BUZZER_WARN ) color = ST7735_YELLOW;
+    if( Buzzer.getStatus() == BUZZER_ALARM )color = ST7735_RED;
+    if(x>100)x=100;
+    tft.fillRect( 10, 64 , x, 14, color );
+    tft.fillRect( 10+x, 64 , 140-x, 14, ST7735_WHITE );
 
-        tft.setTextColor(ST7735_BLUE);
-        tft.setCursor(20, 64+2);
-        tft.print("Bat: ");
-        tft.print(voltage_actual);
-
-        x = analogRead(ADC_RSSI_A) / 10; //1024 * 100;
-        //x = 50;
-        if(x>100)x=100;
+    tft.setTextColor(ST7735_BLUE);
+    tft.setCursor(20, 64+2);
+    tft.print("Bat: ");
+    tft.print(voltage_actual);
+/*
+        x = RX5808.ui8GetRSSI( RX5808.ui8GetReceiver() );
+        //if(x>100)x=100;
         color = ST7735_GREEN;
         tft.fillRect( 10, 84 , x, 14, color );
         tft.fillRect( 10+x, 84 , 140-x, 14, ST7735_WHITE );
         tft.setCursor(20, 84+2);
-        tft.print("RSSI(A): ");
+        tft.print("RSSI: ");
         tft.print(x);
-
-#else
-	LCD.setCursor(0,0);
-	LCD.print(lcd_line1);
-        LCD.setCursor(0,1);
-    	LCD.print(lcd_line2);
-        LCD.setCursor(0,2);
-    	LCD.print(lcd_line3);
-        LCD.setCursor(0,3);
-        LCD.print(lcd_line4);
-#endif
+ */
+    uint8_t *r;
+    r=RX5808.ui8GetAllRSSI();
+    for( uint8_t i=0; i<32; i++ )
+    {
+    	tft.fillRect( 10, 84+i , r[i], 1, ST7735_GREEN );
+    }
 }
 
-void lcddisp_setupdateflag()
+void vUpdateMenu()
 {
-	bLcdUpdate = true;
+	bMenuUpdate = true;
+}
+void vUpdateData()
+{
+	bDataUpdate = true;
 }
 
 void lcddisp_menu() {

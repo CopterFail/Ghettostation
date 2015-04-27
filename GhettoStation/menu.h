@@ -10,8 +10,8 @@
 
 /*########################################### MENU ##################################################*/
 MenuSystem displaymenu;
-Menu rootMenu("");
-MenuItem m1i1Item("START");
+Menu rootMenu("FPV STATION");
+MenuItem m1i1Item("TRACK");
 MenuItem m1i2Item("SET HOME");
 Menu m1m3Menu("CONFIG");
 	Menu m1m3m1Menu("SERVOS");

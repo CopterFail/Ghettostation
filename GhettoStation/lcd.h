@@ -9,9 +9,11 @@
 #define LCD_H_
 
 
+void showMenu( void );
 
+void vUpdateMenu( void );
+void vUpdateData( void );
 void init_lcdscreen( void );
-void lcddisp_setupdateflag( void );
 void refresh_lcd( void );
 void lcddisp_menu( void );
 void lcddisp_tracking( void );

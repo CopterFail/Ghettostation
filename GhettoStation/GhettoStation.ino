@@ -24,16 +24,9 @@
 #include "common.h"
 
 /* Arduino needs all includes in the main ino file - even when not used */
-//#include <LCD03.h>
-//#include <LiquidCrystal_I2C.h>
-//#include <glcd.h>
-//#include "fonts/SystemFont5x7.h"
 #include <Adafruit_GFX.h>
-//#include <Adafruit_SSD1306.h>
-//#include <Adafruit_mfGFX.h>    // Core graphics library
 #include <Adafruit_ST7735.h> // Hardware-specific library
 #include <SPI.h>
-/*/Arduino needs all includes in the main ino file - even when not used */
 
 #ifdef GHETTO_DEBUG
 //#include <MemoryFree.h>
@@ -229,7 +222,8 @@ void setup() {
 #endif
     delay(2500);  // Wait until osd is initialised
 
-    RX5808.vSelectChannel(5);
+    //RX5808.vSelectReceiver(0);
+    //RX5808.vSelectChannel(5);
 }
 
 //######################################## MAIN LOOP #####################################################################
@@ -237,7 +231,7 @@ void loop() {
    
    if (loop1hz.check()) {
         read_voltage();
-        lcddisp_setupdateflag();
+        //vUpdateMenu();
     }
   
     if (loop10hz.check() == 1) {
@@ -262,7 +256,7 @@ while( OSD_SERIAL.available() ){
         //current activity loop
         check_activity();
         //update lcd screen
-        refresh_lcd();
+        //refresh_lcd();
         //debug output to usb Serial
         #ifdef GHETTO_DEBUG
         debug();
@@ -294,10 +288,11 @@ void check_activity() {
     {
         case ActMenu:             //MENU
                 Bearing = 0; Elevation = DEFAULTELEVATION;   
-                lcddisp_menu();
                 if (buttonEnter.holdTime() >= 1000 && buttonEnter.held()) { //long press 
                     displaymenu.back();
+                    vUpdateMenu();
                 }
+                showMenu();
                 break;
         case ActTrack:            //TRACK
                 if ((!home_pos) || (!home_bear)) {  // check if home is set before start tracking
@@ -510,6 +505,7 @@ void enterButtonReleaseEvents(Button &btn)
     if ( buttonEnter.holdTime() < 700 ) { // normal press    
         if ( current_activity == ActMenu ) { //button action depends activity state
             displaymenu.select();
+            vUpdateMenu();
         }
         else if ( current_activity == ActSetHome ) {
             if ((gps_fix) && (!home_pos)) {
@@ -557,6 +553,7 @@ void leftButtonReleaseEvents(Button &btn)
     if ( buttonDown.holdTime() < 700 ) {
         if (current_activity==ActMenu) {
             displaymenu.prev();
+            vUpdateMenu();
         }       
         else if ( current_activity != ActMenu && current_activity != ActTrack && current_activity != ActSetHome ) {
               //We're in a setting area: Left button decrase current value.
@@ -600,6 +597,7 @@ void rightButtonReleaseEvents(Button &btn)
      
         if (current_activity==ActMenu) {
             displaymenu.next();
+            vUpdateMenu();
         }
         else if ( current_activity != ActMenu && current_activity != ActTrack && current_activity != ActSetHome ) {
             //We're in a setting area: Right button decrase current value.
