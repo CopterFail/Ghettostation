@@ -15,7 +15,7 @@
 */
  
 
-#include <avr/pgmspace.h>
+//#include <avr/pgmspace.h>
 #include <Arduino.h>
 
 #include "defines.h"
@@ -39,8 +39,6 @@
 #include <Metro.h>
 #include <MenuSystem.h>
 #include <Button.h>
-#include <EEPROM.h>
-#include <Flash.h>
 #include <EEPROM.h>
 
 #include "menu.h"
@@ -255,8 +253,6 @@ while( OSD_SERIAL.available() ){
 
         //current activity loop
         check_activity();
-        //update lcd screen
-        //refresh_lcd();
         //debug output to usb Serial
         #ifdef GHETTO_DEBUG
         debug();
@@ -655,7 +651,8 @@ void init_menu() {
                 m1m3m1m2Menu.add_item(&m1m3m1m2l2Item, &configure_tilt_maxpwm); // tilt max pwm
                 m1m3m1m2Menu.add_item(&m1m3m1m2l3Item, &configure_tilt_minangle); // tilt min angle
                 m1m3m1m2Menu.add_item(&m1m3m1m2l4Item, &configure_tilt_maxangle); // tilt max angle
-            m1m3m1Menu.add_item(&m1m3m1i3Item, &configure_test_servo);
+                m1m3m1Menu.add_item(&m1m3m1i3Item, &configure_test_servo); // servo test
+                m1m3m1Menu.add_item(&m1m3m1i4Item, &configure_manual_servo); // servo manual
         m1m3Menu.add_menu(&m1m3m2Menu);  //Telemetry
             m1m3m2Menu.add_item(&m1m3m2i1Item, &configure_telemetry); // select telemetry protocol ( Teensy++2 only ) 
             m1m3m2Menu.add_item(&m1m3m2i2Item, &configure_baudrate); // select telemetry protocol
@@ -665,7 +662,12 @@ void init_menu() {
 #endif
             m1m3m3Menu.add_item(&m1m3m3i2Item, &configure_bearing_method); // select tracker bearing reference method
             m1m3m3Menu.add_item(&m1m3m3i3Item, &configure_voltage_ratio);    // set minimum voltage
-        rootMenu.add_item(&m1i4Item, &screen_bank); //set home position
+            m1m3m3Menu.add_item(&m1m3m3i4Item, &screen_bank);    // set eeprom bank
+    rootMenu.add_menu(&m1m4Menu); // VIDEO
+	m1m4Menu.add_item(&m1m41i1Item, &configure_channel); // CHANNEL
+	m1m4Menu.add_item(&m1m41i2Item, &configure_receiver); // RECEIVER
+	m1m4Menu.add_item(&m1m41i3Item, &configure_diversity); // DIVERSITY
+
     displaymenu.set_root_menu(&rootMenu);
 }
 
@@ -713,7 +715,13 @@ void configure_tilt_maxangle(MenuItem* p_menu_item) {
     current_activity = ActTiltMaxAngle;
 }
 
-void configure_test_servo(MenuItem* p_menu_item) {  
+void configure_test_servo(MenuItem* p_menu_item)
+{
+    current_activity = ActTestServo;
+}
+
+void configure_manual_servo(MenuItem* p_menu_item)
+{
     current_activity = ActTestServo;
 }
 
@@ -741,6 +749,19 @@ void configure_bearing_method(MenuItem* p_menu_item) {
 
 void configure_voltage_ratio(MenuItem* p_menu_item) {
     current_activity = ActSetVoltage;
+}
+
+void configure_channel( MenuItem* p_menu_item )
+{
+	current_activity = ActSetVoltage;
+}
+void configure_receiver( MenuItem* p_menu_item )
+{
+	current_activity = ActSetVoltage;
+}
+void configure_diversity( MenuItem* p_menu_item )
+{
+	current_activity = ActSetVoltage;
 }
 
 //######################################## TELEMETRY FUNCTIONS #############################################
@@ -1103,14 +1124,19 @@ template <class T> int EEPROM_read(int ee, T& value)
 
 
 
-void clear_eeprom() {
+void clear_eeprom( void )
+{
     // clearing eeprom
     cli();
     for (int i = 0; i < 1025; i++)
+    {
         EEPROM.write(i, 0);
+    }
+
 	// eeprom is clear  we can write default config
-        //writing 4 setting banks.
-        for (int j = 0; j < 4; j++) {
+    //writing 4 setting banks.
+    for (int j = 0; j < 4; j++)
+    {
 	    configuration.config_crc = CONFIG_VERSION;  // config version check
 	    configuration.pan_minpwm = PAN_MINPWM;
 	    configuration.pan_minangle = PAN_MINANGLE;
@@ -1119,15 +1145,15 @@ void clear_eeprom() {
 	    configuration.tilt_minpwm = TILT_MINPWM;
 	    configuration.tilt_minangle = TILT_MINANGLE;
 	    configuration.tilt_maxpwm = TILT_MAXPWM;
-            configuration.tilt_maxangle = TILT_MAXANGLE;
+        configuration.tilt_maxangle = TILT_MAXANGLE;
 	    configuration.baudrate = 6;
-            configuration.telemetry = 0;
-            configuration.bearing = 0;
-            configuration.osd_enabled = 0;
-            configuration.bearing_method = 1;
-            configuration.voltage_ratio = VOLTAGE_RATIO;  // ratio*10
+        configuration.telemetry = 0;
+        configuration.bearing = 0;
+        configuration.osd_enabled = 0;
+        configuration.bearing_method = 1;
+        configuration.voltage_ratio = VOLTAGE_RATIO;  // ratio*10
 	    EEPROM_write(config_bank[j], configuration);
-        }
+    }
         sei();
 }
 

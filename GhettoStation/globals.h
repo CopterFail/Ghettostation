@@ -12,7 +12,11 @@
 typedef enum tActivity { ActMenu=0, ActTrack, ActSetHome,
 	ActPanMinPwm, ActPanMinAngle, ActPanMaxPwm,	ActPanMaxAngle,
 	ActTiltMinPwm, ActTiltMinAngle, ActTiltMaxPwm, ActTiltMaxAngle,
-	ActTestServo, ActSetTelemetrie,	ActSetBaud, ActSetBank, ActSetOsd, ActSetBearing, ActSetVoltage };
+	ActTestServo, ActManualServo,
+	ActSetTelemetrie,	ActSetBaud, ActSetBank,
+	ActSetOsd, ActSetBearing, ActSetVoltage,
+	ActSetChannel, ActSetReceiver, ActSetDiversity
+};
 
 // declaration of all the global variables used by the station
 
@@ -98,6 +102,10 @@ struct config_t // 28 bytes
     uint8_t osd_enabled;
     uint8_t bearing_method;
     uint16_t voltage_ratio;
+    uint8_t channel;
+    uint8_t receiver;
+    uint8_t diversity;
+    uint8_t dummy;
 };
 extern config_t configuration;
 
