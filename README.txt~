@@ -1,17 +1,22 @@
 ##############################################################################
-#               FPV Station, antenna tracker, diversity receiver             #
+#                   Ghettostation antenna tracker                            #
 #                               README                                       #
 ##############################################################################
 
-This project is inspired from KipK's Ghettostation:
+This project is forked from KipK's Ghettostation:
+ https://github.com/KipK/Ghettostation
 
-Differences to the Ghettostation project:
+Setup & usage instruction can be found on the original Wiki:
+ https://github.com/KipK/Ghettostation/wiki
+
+Differences to original Ghettostation:
  - HoTT BT protocoll added (tested with a MX12 with bluetooth mod)
  - TEENSY3.1 board support (faster, more serial ports)
- - ST7735 LCD display support (color, 128x180 pixel), the other displays are not supported
+ - ST7735 LCD display support (color, 128x180 pixel)
+
+Plans:
  - Support for RX5808 with SPI mod
  - diversity 
-
 
 Credits:
 
