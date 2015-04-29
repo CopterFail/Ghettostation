@@ -65,8 +65,8 @@ extern uint8_t home_sent;
 //tracking
 extern int16_t Bearing;
 extern int16_t Elevation;
-extern int16_t servoBearing;
-extern int16_t servoElevation;
+//extern int16_t servoBearing;
+//extern int16_t servoElevation;
 
 extern tActivity current_activity;
 

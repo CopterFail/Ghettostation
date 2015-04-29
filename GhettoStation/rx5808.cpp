@@ -49,7 +49,7 @@ cRX5808::cRX5808()
 
 	  ui8ActiveChannel = 0;
 	  ui8ActiveReceiver = 0;
-	  ui16MaxRssi = 32; // 1V with 3V3 Refenenz: 1 * 1024 / 3,3 = 31
+	  ui16MaxRssi = 310; // 1V with 3V3 Refenenz: 1 * 1024 / 3,3 = 310
 	  ui16MinRssi = 16; // 0.5V
 
 }

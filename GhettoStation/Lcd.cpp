@@ -144,6 +144,8 @@ void vShowSpectrum( uint8_t *data, uint8_t channel )
 {
 	uint8_t y;
 	uint16_t color;
+
+	channel++;
 	tft.fillRect( 0, 64, 160, 64, ST7735_BLACK );
 	for( uint8_t i=1U; i<33U; i++ )
 	{
@@ -160,6 +162,68 @@ void vShowSpectrum( uint8_t *data, uint8_t channel )
 	tft.setCursor( 134, 86 );
 	tft.print(channel);
 	vShowSoftkeys( "PREV","EXIT","NEXT" );
+}
+
+void vShowPosition( int16_t i16Bearing, int16_t i16Dist, int16_t i16HBering )
+{
+	static int16_t i16LastBearing=0;
+	static int16_t i16LastDist=0;
+	static uint32_t ui32LastMillis=0;
+
+	int16_t x0,y0,x1,y1,x2,y2;
+	float ftmp;
+
+	if( ( millis() - ui32LastMillis ) < 500 ) return;
+	if( (i16LastBearing == i16Bearing) && (i16LastDist == i16Dist) ) return;
+	i16LastBearing = i16Bearing;
+	i16LastDist = i16Dist;
+	ui32LastMillis = millis();
+
+	tft.fillRect( 0, 0, 160, 128, BLACK );
+
+	x0 = 160/2;
+	y0 = 128/2;
+
+	ftmp = sin(float(i16Bearing)/180.0*M_PI)*float(i16Dist);
+	if( ftmp > (x0-10) ) ftmp = (x0-10);
+	if( ftmp < -(x0-10) ) ftmp = -(x0-10);
+	x1 = (int16_t)ftmp;
+	ftmp = -cos(float(i16Bearing)/180.0*M_PI)*float(i16Dist);
+	if( ftmp > (y0-10) ) ftmp = (y0-10);
+	if( ftmp < -(y0-10) ) ftmp = -(y0-10);
+	y1 = (int16_t)ftmp;
+
+	ftmp = sin(float(i16HBering)/180.0*M_PI)*40.0;
+	x2 = x0 + (int16_t)ftmp;
+	ftmp = -cos(float(i16HBering)/180.0*M_PI)*40.0;
+	y2 = y0 + (int16_t)ftmp;
+
+	tft.drawLine( x0, y0, x0+x1, y0+y1, ST7735_YELLOW );
+	tft.drawLine( x0, y0, x2, y2, ST7735_YELLOW );
+
+	tft.fillCircle( x0, y0, 5, ST7735_BLUE );
+	tft.fillCircle( x0+x1, y0+y1, 5, ST7735_RED );
+
+	tft.setCursor( x2, y2-4 );
+	tft.setTextSize(2);
+	tft.setTextColor( ST7735_WHITE );
+	tft.print("N");
+
+	tft.setCursor( x0 + 3*x1/4, y0 + 3*y1/4 );
+	tft.setTextSize(1);
+	tft.print(i16Dist);
+	tft.print("m");
+
+	tft.setCursor( x0 + x1/4, y0 + y1/4 );
+	tft.setTextSize(1);
+	tft.print(i16Bearing);
+	//tft.print("°");
+
+
+	tft.setCursor( 0, 128-2*8 );
+	tft.setTextSize(1);
+	vShowGpsData();
+
 }
 
 void showMenu( void )
@@ -245,7 +309,7 @@ void lcddisp_sethome( void )
 	{
 		tft.println("WAITING");
 	}
-	vShowSoftkeys( "","QUIT(long)","" );
+	vShowSoftkeys( "","EXIT","" );
 }
 
 void lcddisp_setbearing( void ) 
@@ -282,6 +346,9 @@ void lcddisp_setbearing( void )
 		tft.println("Set Heading");
 	}
 	
+	tft.print("Home bearing [°]: ");
+	tft.println("home_bearing");
+	
 	if (configuration.bearing_method == 2)
 	{
 		vShowSoftkeys( "-","SELECT","+" );
@@ -307,21 +374,28 @@ void lcddisp_homeok( void )
     }
     tft.println("HOME IS SET");
     tft.println("Enter:Start Tracking");
-    tft.println("<< Menu     Reset >>");
     vShowSoftkeys( "MENU","TRACKING","RESET" );
 }
 
-void lcddisp_tracking( void )
+void lcddisp_tracking( uint8_t ui8Mode )
 {
-	char currentline[21];
-	vPrepareDataSection();
-	vShowGpsStatus();
-    sprintf(currentline, "Alt:%dm Spd:%d", (int)round(rel_alt/100.0f), uav_groundspeed);
-	tft.println(currentline);
-    sprintf(currentline, "Dist:%dm Hdg:%d", (int)round(home_dist/100.0f), uav_heading);
-	tft.println(currentline);
-	vShowGpsData();
-	vShowSoftkeys( "","QUIT(long)","" );
+// depend on mode: vShowPosition( int16_t i16Bearing, int16_t i16Dist, int16_t i16HBering )
+	if( 0 == ui8Mode )
+	{
+		char currentline[21];
+		vPrepareDataSection();
+		vShowGpsStatus();
+		sprintf(currentline, "Alt:%dm Spd:%d", (int)round(rel_alt/100.0f), uav_groundspeed);
+		tft.println(currentline);
+		sprintf(currentline, "Dist:%dm Hdg:%d", (int)round(home_dist/100.0f), uav_heading);
+		tft.println(currentline);
+		vShowGpsData();
+		vShowSoftkeys( "-","EXIT/MODE","+" );
+	}
+	else
+	{
+		vShowPosition( Bearing, home_dist, home_bearing );
+	}
 }
 
 void lcddisp_telemetry( void ) 
@@ -390,13 +464,14 @@ void lcddisp_osd( void )
 void lcddisp_bearing_method( void ) 
 {
 	vPrepareDataSection();
-	tft.println("BEARING METHOD");
+	tft.println("BEARING METHOD:");
+	
     switch (configuration.bearing_method) 
 	{
-    case 1:	tft.println("MSP"); break;
-    case 2:	tft.println("LTM"); break;
-    case 3:	tft.println("MavLink"); break;
-    case 4:	tft.println("NMEA"); break;
+    case 1:	tft.println("GPS (set uav 20m from home)"); break;
+    case 2:	tft.println("MANUAL"); break;
+    case 3:	tft.println("UAV HEADING"); break;
+    case 4:	tft.println("MAG"); break;
 	}
 	vShowSoftkeys( "PREV","SELECT","NEXT" );
 }
@@ -425,15 +500,25 @@ void lcddisp_voltage_ratio( void )
 	sprintf(currentline,"Ratio:  %s ", dtostrf(voltage_ratio, 3, 2, bufferV));
 	tft.println(currentline);
 
-	vShowSoftkeys( "-","QUIT(long)","+" );
+	vShowSoftkeys( "-","EXIT","+" );
 }
 
-void lcddisp_testservo( void ) 
+void lcddisp_testservo( uint8_t ui8Mode ) 
 {
 	vPrepareDataSection();
 	tft.println("TESTING SERVOS");
-	tft.println("CONFIGURATION");
-	vShowSoftkeys( "","QUIT(long)","" );
+	tft.print("Pan:  ");
+	tft.println(Bearing);
+	tft.print("Tilt: ");
+	tft.println(Elevation);
+	if( ui8Mode > 0 )
+	{
+		vShowSoftkeys( "-","SEL/EXIT","+" );
+	}
+	else
+	{
+		vShowSoftkeys( "","EXIT","" );
+	}
 }
 
 int config_servo(int servotype, int valuetype, int value ) 
@@ -470,7 +555,7 @@ int config_servo(int servotype, int valuetype, int value )
         case 4: sprintf(currentline, "max angle: <%3d>    ", value); break;         //maxangle
     }
 	tft.println(currentline);
-	vShowSoftkeys( "-","QUIT(long)","+" );
+	vShowSoftkeys( "-","EXIT","+" );
 	
     return value;
 }
