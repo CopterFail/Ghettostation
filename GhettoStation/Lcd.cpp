@@ -135,12 +135,13 @@ void vShowBattery( void )
 
 void vShowRssi( void )
 {
-  read_voltage();
+  uint16_t ui16Val = map( RX5808.ui16GetRssi( RX5808.ui8GetReceiver() ),
+		  RX5808.ui16GetMinRssi(), RX5808.ui16GetMaxRssi(), 0, 100 );
   tft.print( "RSSI[%]:" );
-  tft.println( RX5808.ui8GetRSSI( RX5808.ui8GetReceiver() ));
+  tft.println( ui16Val );
 }
 
-void vShowSpectrum( uint8_t *data, uint8_t channel )
+void vShowSpectrum( uint16_t *data, uint8_t channel )
 {
 	uint8_t y;
 	uint16_t color;
@@ -153,7 +154,7 @@ void vShowSpectrum( uint8_t *data, uint8_t channel )
 			color = ST7735_RED;
 		else
 			color = ST7735_GREEN;
-		y = *data >> 1;
+		y = (uint8_t) map( *data, RX5808.ui16GetMinRssi(), RX5808.ui16GetMaxRssi(), 0, 50 );
 		tft.fillRect( i<<2, 115-y, 4, y, color );
 		data++;
 	}

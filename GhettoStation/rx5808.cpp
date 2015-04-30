@@ -44,28 +44,30 @@ cRX5808::cRX5808()
 	  digitalWrite(PIN_RX_SPI_CLK, LOW);
 	  digitalWrite(PIN_RX_SPI_DATA, LOW);
 
-	  digitalWrite(PIN_ENABLE_RX_A, HIGH);
-	  digitalWrite(PIN_ENABLE_RX_B, LOW);
-
-	  ui8ActiveChannel = 0;
-	  ui8ActiveReceiver = 0;
-	  ui16MaxRssi = 310; // 1V with 3V3 Refenenz: 1 * 1024 / 3,3 = 310
+	  ui8ActiveChannel = 255;	// none
+	  ui8ActiveReceiver = 255;	// none 
+	  ui16MaxRssi = 310; // 1V with 3V3 Referenz: 1 * 1024 / 3,3 = 310
 	  ui16MinRssi = 16; // 0.5V
+	  
+	  vSelectReceiver( 0 );
+	  vSelectChannel( 0 );
 
 }
 
 void cRX5808::vSelectReceiver( uint8_t ui8Receiver )
 {
+	if(ui8Receiver == ui8ActiveReceiver) return; // nothing to do
+	
 	if(ui8Receiver)
 	{
 		digitalWrite( PIN_ENABLE_RX_B, HIGH );
-		digitalWrite( PIN_ENABLE_RX_B, LOW );
+		digitalWrite( PIN_ENABLE_RX_A, LOW );
 		ui8ActiveReceiver = 1;
 	}
 	else
 	{
 		digitalWrite( PIN_ENABLE_RX_B, LOW );
-		digitalWrite( PIN_ENABLE_RX_B, HIGH );
+		digitalWrite( PIN_ENABLE_RX_A, HIGH );
 		ui8ActiveReceiver = 0;
 	}
 }
@@ -75,6 +77,8 @@ void cRX5808::vSelectChannel( uint8_t ui8NewChannel )
 	uint16_t channelData;
 	uint8_t i;
 
+	if(ui8NewChannel == ui8ActiveChannel) return; // nothing to do
+	
 	ui8NewChannel &= 0x1f;
 	channelData = channelTable[ui8NewChannel];
 	vEnableHigh();
@@ -141,17 +145,21 @@ void cRX5808::vSelectChannel( uint8_t ui8NewChannel )
 	ui8ActiveChannel = ui8NewChannel;
 }
 
-uint8_t cRX5808::ui8GetRSSI( uint8_t ui8Receiver )
+uint16_t cRX5808::ui16GetRssi( uint8_t ui8Receiver )
 {
 	uint16_t rssi = 0;
+	if(ui8Receiver == 255) ui8Receiver = ui8ActiveReceiver;
+	
 	for (uint8_t i = 0; i < 10; i++)
 	{
 	    rssi += analogRead( ui8Receiver ? ADC_RSSI_B : ADC_RSSI_A );
 	}
-	rssi=rssi/10;
-	rssi = map( rssi, ui16MinRssi, ui16MaxRssi, 0, 100);
-
-	return (uint8_t)rssi;
+	rssi = rssi/10;
+	if( rssi > ui16MaxRssi ) ui16MaxRssi = rssi;
+	else if( rssi < ui16MinRssi ) ui16MinRssi = rssi;
+	aui8Rssi[ui8ActiveChannel & 0x1f] = rssi;
+	//rssi = map( rssi, ui16MinRssi, ui16MaxRssi, 0, 100);
+	return rssi;
 }
 
 uint8_t cRX5808::ui8ScanChannels( uint8_t ui8Set )
@@ -163,7 +171,7 @@ uint8_t cRX5808::ui8ScanChannels( uint8_t ui8Set )
 	{
 		vSelectChannel( ui8Channel );
 		delay( 150 );
-		ui8Rssi = ui8GetRSSI( ui8ActiveReceiver );
+		ui8Rssi = ui16GetRssi( ui8ActiveReceiver );
 		aui8Rssi[ui8Channel] = ui8Rssi;
 		if( ui8Rssi >= ui8BestRssi )
 		{
@@ -176,6 +184,23 @@ uint8_t cRX5808::ui8ScanChannels( uint8_t ui8Set )
 		vSelectChannel( ui8Best );
 	}
 	return ui8Best;
+}
+
+void cRX5808::vDiversity( void )
+{
+	#define HYSTERESIS	30	// 0.1V
+	int16_t i16RssiA = (int16_t)ui16GetRssi( 0 );
+	int16_t i16RssiB = (int16_t)ui16GetRssi( 1 );
+	int16_t idiff = i16RssiA - i16RssiB;
+	
+	if( (idiff > HYSTERESIS) && (ui8ActiveReceiver == 1) )
+	{
+		vSelectReceiver( 0 );
+	}
+	else if( (idiff < -HYSTERESIS) && (ui8ActiveReceiver == 0) )
+	{
+		vSelectReceiver( 1 );
+	}
 }
 
 void cRX5808::vSendBit1( void )

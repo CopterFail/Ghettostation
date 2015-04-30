@@ -15,7 +15,7 @@ private:
 	uint8_t ui8ActiveChannel;
 	uint8_t ui8ActiveReceiver;
 	uint16_t ui16MaxRssi, ui16MinRssi;
-	uint8_t aui8Rssi[CHANNELCOUNT];
+	uint16_t aui8Rssi[CHANNELCOUNT];
 
 	void vSendBit0( void );
 	void vSendBit1( void );
@@ -26,11 +26,13 @@ public:
 	cRX5808();
 	void vSelectChannel( uint8_t ui8NewChannel );
 	void vSelectReceiver( uint8_t ui8Receiver );
-	uint8_t ui8GetRSSI( uint8_t ui8Receiver );
+	uint16_t ui16GetRssi( uint8_t ui8Receiver );
+	uint16_t ui16GetMaxRssi( void ){ return ui16MaxRssi; }
+	uint16_t ui16GetMinRssi( void ){ return ui16MinRssi; }
 	uint8_t ui8GetChannel( void ){ return ui8ActiveChannel; }
 	uint8_t ui8GetReceiver( void ){ return ui8ActiveReceiver; }
 	uint8_t ui8ScanChannels( uint8_t ui8Set );
-	uint8_t *ui8GetAllRSSI( void ){ return aui8Rssi; }
+	uint16_t *pui16GetAllRSSI( void ){ return aui8Rssi; }
 	void vDiversity( void );
 
 };

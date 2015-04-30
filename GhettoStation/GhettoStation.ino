@@ -534,7 +534,7 @@ void check_activity(void)
             break;
         case ActSetChannel:               //Config video channel
         	RX5808.vSelectChannel( configuration.channel );
-          	vShowSpectrum( RX5808.ui8GetAllRSSI(), configuration.channel);
+          	vShowSpectrum( RX5808.pui16GetAllRSSI(), configuration.channel);
             if (buttonEnter.holdTime() >= 700 && buttonEnter.held()) //long press
 			{
                 EEPROM_write(config_bank[int(current_bank)], configuration);
@@ -864,7 +864,7 @@ void configure_voltage_ratio(MenuItem* p_menu_item)
 void configure_channel( MenuItem* p_menu_item )
 {
 	current_activity = ActSetChannel;
-	vShowSpectrum( RX5808.ui8GetAllRSSI(), configuration.channel );
+	vShowSpectrum( RX5808.pui16GetAllRSSI(), configuration.channel );
 }
 void configure_receiver( MenuItem* p_menu_item )
 {
