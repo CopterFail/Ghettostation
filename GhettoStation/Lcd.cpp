@@ -316,6 +316,8 @@ void lcddisp_sethome( void )
 void lcddisp_setbearing( void ) 
 {
     switch (configuration.bearing_method) {
+        case 1:
+        	break;
         case 2:
             if (buttonUp.holdTime() >= 700 && buttonUp.isPressed() ) {
                 home_bearing+=10;
@@ -348,7 +350,7 @@ void lcddisp_setbearing( void )
 	}
 	
 	tft.print("Home bearing [°]: ");
-	tft.println("home_bearing");
+	tft.println(home_bearing);
 	
 	if (configuration.bearing_method == 2)
 	{
@@ -395,7 +397,7 @@ void lcddisp_tracking( uint8_t ui8Mode )
 	}
 	else
 	{
-		vShowPosition( Bearing, home_dist, home_bearing );
+		vShowPosition( Bearing, (int16_t)round(home_dist/100.0f), home_bearing );
 	}
 }
 
@@ -411,7 +413,7 @@ void lcddisp_telemetry( void )
     case 3:	tft.println("MavLink"); break;
     case 4:	tft.println("NMEA"); break;
     case 5:	tft.println("UBLOX"); break;
-    default:
+    default: configuration.telemetry = 6;
     case 6:	tft.println("HoTT"); break;
 	}
 	vShowSoftkeys( "PREV","SELECT","NEXT" );
@@ -430,6 +432,7 @@ void lcddisp_baudrate( void )
     case 4:	tft.println("19200"); break;
     case 5:	tft.println("38400"); break;
     case 6:	tft.println("57600"); break;
+    default: configuration.baudrate = 7;
     case 7:	tft.println("115200"); break;
 	}
 	vShowSoftkeys( "PREV","SELECT","NEXT" );
@@ -443,6 +446,7 @@ void lcddisp_bank( void )
     switch (current_bank) 
 	{
     case 0:	tft.println("1.2 GHZ"); break;
+    default: current_bank = 1;
     case 1:	tft.println("5.8 GHZ"); break;
     case 2:	tft.println("BANK 3"); break;
     case 3:	tft.println("BANK 4"); break;
@@ -456,6 +460,7 @@ void lcddisp_osd( void )
 	tft.println("ENABLE OSD:");
     switch (configuration.osd_enabled) 
 	{
+    default: configuration.osd_enabled=0;
     case 0:	tft.println("NO"); break;
     case 1:	tft.println("YES"); break;
 	}
@@ -470,6 +475,7 @@ void lcddisp_bearing_method( void )
     switch (configuration.bearing_method) 
 	{
     case 1:	tft.println("GPS (set uav 20m from home)"); break;
+    default: configuration.bearing_method = 2;
     case 2:	tft.println("MANUAL"); break;
     case 3:	tft.println("UAV HEADING"); break;
     case 4:	tft.println("MAG"); break;

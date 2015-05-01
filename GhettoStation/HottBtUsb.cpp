@@ -12,7 +12,7 @@
 /* Configuration */
 #define HOTT_WAIT_TIME 800U		// time to wait for response
 #define HOTT_DELAY_TIME 1000U	// time to wait between requests
-//#define HOTT_DEBUG
+#define HOTT_DEBUG
 
 /* local defines */
 #define HOTT_REQUEST_GPS	1
@@ -31,7 +31,7 @@ static bool bHottReadGpsResponse( void );
 static void vHottSendReceiverRequest( void );
 static bool bHottReadReceiverResponse( void );
 static bool vHottClean( void );
-static void vUpdateGhettoData( void );
+static void vUpdateGlobalData( void );
 static bool bIsBtConnected( void );
 
 /* local data */
@@ -200,9 +200,9 @@ void vHottTelemetrie( void )
 		case HOTT_UPDATE_GHETTO:
 			if( bUpdate )
 			{
-				vUpdateGhettoData();
+				vUpdateGlobalData();
 #ifdef HOTT_DEBUG
-				DEBUG_SERIAL.println("HOTT_UPDATE_GHETTO");
+				DEBUG_SERIAL.println("HOTT_UPDATE_DATA");
 #endif
 			}
 			bUpdate = false;
@@ -276,7 +276,7 @@ static bool bIsBtConnected( void )
 	return digitalRead(PIN_BT_STATUS);
 }
 
-static void vUpdateGhettoData( void )
+static void vUpdateGlobalData( void )
 {
 	/*
     GPSData.ui16DistanceToHome 
@@ -309,8 +309,19 @@ static void vUpdateGhettoData( void )
 	lastpacketreceived = millis();
 
 #ifdef HOTT_DEBUG
+	static float w=0;
 	uav_satellites_visible = 6;
 	uav_fix_type = 3;
+	// The home pos:
+	uav_lat = 1e7 * 5.0;
+	uav_lon = 1e7 * 50;
+	if( home_pos )
+	{
+		// fly circles around the home pos...
+		uav_lat += 1e7 * 0.1 * sin(w);
+		uav_lon += 1e7 * 0.1 * cos(w);
+		w+=0.1;
+	}
 #endif
 
 

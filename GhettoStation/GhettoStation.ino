@@ -220,9 +220,6 @@ void setup() {
     compass.SetMeasurementMode(Measurement_Continuous); // Set the measurement mode to Continuous
 #endif
     delay(2500);  // Wait until osd is initialised
-
-    //RX5808.vSelectReceiver(0);
-    //RX5808.vSelectChannel(5);
 }
 
 //######################################## MAIN LOOP #####################################################################
