@@ -12,7 +12,7 @@
 /* Configuration */
 #define HOTT_WAIT_TIME 800U		// time to wait for response
 #define HOTT_DELAY_TIME 1000U	// time to wait between requests
-#define HOTT_DEBUG
+#define HOTT_DEBUG				// debug option
 
 /* local defines */
 #define HOTT_REQUEST_GPS	1
@@ -286,8 +286,8 @@ static void vUpdateGlobalData( void )
 	uav_lon = ui32HottGetGpsDegree( GPSData.ui16LongitudeHigh, GPSData.ui16LongitudeLow);	// longitude
 	uav_satellites_visible = GPSData.ui8Sat;		// number of satellites
 	uav_fix_type = GPSData.ui8FixChar;				// GPS lock 0-1=no fix, 2=2D, 3=3D
-	uav_alt = GPSData.ui16Altitude/10;   			// altitude (dm)
-	rel_alt = GPSData.ui16Altitude/10; 				// relative altitude to home
+	uav_alt = (int32_t)GPSData.ui16Altitude * 10;   // altitude (cm)
+	//rel_alt = GPSData.ui16Altitude * 10; 			// relative altitude to home
 	uav_groundspeed = GPSData.ui16Speed;            // ground speed in km/h
 	uav_groundspeedms = GPSData.ui16Speed;          // ground speed in m/s
 	uav_pitch = GPSData.ui8AngleX;                  // attitude pitch
@@ -313,13 +313,17 @@ static void vUpdateGlobalData( void )
 	uav_satellites_visible = 6;
 	uav_fix_type = 3;
 	// The home pos:
-	uav_lat = 1e7 * 5.0;
-	uav_lon = 1e7 * 50;
+	uav_lat = 1e7 * 51.3678;
+	uav_lon = 1e7 * 6.78756;
 	if( home_pos )
 	{
-		// fly circles around the home pos...
-		uav_lat += 1e7 * 0.1 * sin(w);
-		uav_lon += 1e7 * 0.1 * cos(w);
+		// fly circles (r=1km) around the home pos...
+		uav_lat += 1e7 * 0.01113195 * sin(w);
+		uav_lon += 1e7 * 0.01113195 * cos(w);
+
+		// 0 .. 1000m height depend on pan angle...
+		uav_alt = (int32_t)(50000.0 * ( 1 + sin(w) ) );
+
 		w+=0.1;
 	}
 #endif

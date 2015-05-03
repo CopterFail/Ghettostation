@@ -1,6 +1,8 @@
 
 // 2015 by CopterFail
 
+//ToDo remove tone....
+
 enum eBuzzerStatus { BUZZER_IDLE=0, BUZZER_WARN, BUZZER_ALARM };
 
 class cBuzzer{
@@ -23,6 +25,13 @@ public:
 	eBuzzerStatus getStatus( void ){
 		return ui8Status;
 	};
+
+	void vClick( void ){
+		if( ui8Status == BUZZER_IDLE )
+		{
+			tone(BUZZER_PIN,1600,40);
+		}
+	}
 
 private:
 

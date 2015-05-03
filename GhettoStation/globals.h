@@ -26,7 +26,7 @@ extern int32_t      uav_lon;                        // longitude
 extern float        lonScaleDown;                   // longitude scaling
 extern uint8_t      uav_satellites_visible;         // number of satellites
 extern uint8_t      uav_fix_type;                   // GPS lock 0-1=no fix, 2=2D, 3=3D
-extern int32_t      uav_alt;                        // altitude (dm)
+extern int32_t      uav_alt;                        // altitude (cm)
 extern int32_t      rel_alt;                        // relative altitude to home
 extern uint16_t     uav_groundspeed;                // ground speed in km/h
 extern uint8_t      uav_groundspeedms;              // ground speed in m/s

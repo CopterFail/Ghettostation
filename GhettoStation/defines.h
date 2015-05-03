@@ -8,7 +8,7 @@
 #ifndef DEFINES_H_
 #define DEFINES_H_
 
-//#define GHETTO_DEBUG
+#define GHETTO_DEBUG
 
 /* ########################################  PROTOCOL ######################################################*/
 #define PROTOCOL_UAVTALK                        // OpenPilot / Taulabs protocol
@@ -68,8 +68,9 @@
 #define BANK4  "Bank 4"
 
 //GS Battery alarm (2S)
-#define MIN_VOLTAGE1 7.0f //10.5f // First battery alarm level. Will emit 2 short tones every 10 sec.
-#define MIN_VOLTAGE2 6.6f //10.0f // Second battery alarm level. Will emit 1 short + 1 long tone every 5 sec
+#define LIPO_MIN_VOLTAGE 3.0
+#define MIN_VOLTAGE1 3.5f //10.5f // First battery alarm level. Will emit 2 short tones every 10 sec.
+#define MIN_VOLTAGE2 3.3f //10.0f // Second battery alarm level. Will emit 1 short + 1 long tone every 5 sec
 #define VOLTAGE_RATIO 1100   // Default multiplier for battery voltage reading * 100. This can eb adjustd later from the menu.
 #define VOLTAGE_REF 3.3f
 #define DAMPING	0.9f

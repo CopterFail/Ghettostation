@@ -78,7 +78,7 @@ int32_t      uav_lon = 0;                    // longitude
 float        lonScaleDown=0.0;               // longitude scaling
 uint8_t      uav_satellites_visible = 0;     // number of satellites
 uint8_t      uav_fix_type = 0;               // GPS lock 0-1=no fix, 2=2D, 3=3D
-int32_t      uav_alt = 0;                    // altitude (dm)
+int32_t      uav_alt = 0;                    // altitude (cm)
 int32_t      rel_alt = 0;                    // relative altitude to home
 uint16_t     uav_groundspeed = 0;            // ground speed in km/h
 uint8_t      uav_groundspeedms = 0;          // ground speed in m/s
@@ -208,7 +208,8 @@ void setup() {
     attach_servo(tilt_servo, TILT_SERVOPIN, configuration.tilt_minpwm, configuration.tilt_maxpwm); 
 
     // move servo to neutral pan & DEFAULTELEVATION tilt at startup 
-    servoPathfinder( DEFAULTBEARING, DEFAULTELEVATION );
+    vParkServos();
+
     // setup button callback events
     buttonEnter.releaseHandler(enterButtonReleaseEvents);
     buttonDown.releaseHandler(leftButtonReleaseEvents);
@@ -312,6 +313,7 @@ void check_activity(void)
                     if (buttonEnter.holdTime() >= 700 && buttonEnter.held()) //long press 
 					{ 
                         current_activity = ActMenu;
+                        vParkServos();
                         //telemetry_off();
                     }
                 }
@@ -469,7 +471,7 @@ void check_activity(void)
                 current_activity=ActMenu;
                 test_servo_cnt = 360;
                 test_servo_step = 1;
-                servoPathfinder( DEFAULTBEARING, DEFAULTELEVATION );
+                vParkServos();
             }
             break;
         
@@ -1155,6 +1157,11 @@ void test_servos(void)
 	servoPathfinder(Bearing,Elevation);
 }
 
+void vParkServos( void )
+{
+	servoPathfinder( DEFAULTBEARING, DEFAULTELEVATION );
+}
+
 //######################################## TRACKING #############################################
 
 void antenna_tracking(void) 
@@ -1253,8 +1260,8 @@ void retrieve_mag()
 
 void read_voltage( void )
 {
+	static uint8_t s=0;
 	uint16_t ui16Volt=0;
-
 
 	for( uint8_t i=0; i<8; i++ )
 	{
@@ -1264,10 +1271,15 @@ void read_voltage( void )
 	voltage_actual = (float)(ui16Volt);
 	voltage_actual = voltage_actual / 1024.0 * VOLTAGE_REF * voltage_ratio;
 
-    if (voltage_actual <= MIN_VOLTAGE2)
-    	;//Buzzer.vsetStatus( BUZZER_ALARM );
-    else if (voltage_actual <= MIN_VOLTAGE1)
-         ;//Buzzer.vsetStatus( BUZZER_WARN );
+	if( s == 0 )	// count lipo cells on first call..
+	{
+		while( voltage_actual > ( (s+1) * LIPO_MIN_VOLTAGE) ) s++;
+	}
+
+    if (voltage_actual <= ( s * MIN_VOLTAGE2) )
+    	Buzzer.vsetStatus( BUZZER_ALARM );
+    else if (voltage_actual <= ( s * MIN_VOLTAGE1  ))
+         Buzzer.vsetStatus( BUZZER_WARN );
     else
     	Buzzer.vsetStatus( BUZZER_IDLE );
 }
