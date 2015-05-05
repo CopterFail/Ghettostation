@@ -214,6 +214,10 @@ void setup() {
     buttonEnter.releaseHandler(enterButtonReleaseEvents);
     buttonDown.releaseHandler(leftButtonReleaseEvents);
     buttonUp.releaseHandler(rightButtonReleaseEvents);
+    buttonEnter.clickHandler(ButtonPressEvents);
+    buttonDown.clickHandler(ButtonPressEvents);
+    buttonUp.clickHandler(ButtonPressEvents);
+
 #if defined(COMPASS)
     compass = HMC5883L(); // Construct a new HMC5883 compass.
     delay(100);
@@ -545,6 +549,11 @@ void check_activity(void)
 
 //######################################## BUTTONS #####################################################################
 
+void ButtonPressEvents(Button &btn)
+{
+	Buzzer.vClick();
+}
+
 void enterButtonReleaseEvents(Button &btn)
  {
     //DEBUG_SERIAL.println(current_activity);
@@ -867,7 +876,9 @@ void configure_channel( MenuItem* p_menu_item )
 }
 void configure_receiver( MenuItem* p_menu_item )
 {
-	current_activity = ActSetReceiver;
+	//current_activity = ActSetReceiver;
+	if(RX5808.ui8GetReceiver()>0) RX5808.vSelectReceiver(0);
+	else RX5808.vSelectReceiver(1);
 }
 void configure_diversity( MenuItem* p_menu_item )
 {

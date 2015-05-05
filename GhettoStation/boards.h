@@ -74,7 +74,7 @@
   #define ADC_RSSI_A		27 //A16// reserved for RX5808 module, pin is smd pad (A16 / 27)
   #define ADC_RSSI_B		28 //A17 // reserved for RX5808 module, pin is smd pad (A17 / 28)
   #define PIN_ENABLE_RX_A	32 // reserved for RX5808 module, pin is smd pad
-  #define PIN_ENABLE_RX_B	33 // reserved for RX5808 module, pin is smd pad
+  #define PIN_ENABLE_RX_B	29 //33 did not start ?? // reserved for RX5808 module, pin is smd pad
 
   #define OSD_SERIAL 		Serial2  // use pins 9(RX2) and 10(TX2)
   #define TELEMETRY_SERIAL	Serial1  // use pins 0(RX1) and 1(TX1)  // make this TELEMETRY_SERIAL for all protocols

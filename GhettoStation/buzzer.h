@@ -29,7 +29,7 @@ public:
 	void vClick( void ){
 		if( ui8Status == BUZZER_IDLE )
 		{
-			tone(BUZZER_PIN,1600,40);
+			tone(BUZZER_PIN,1600,60);
 		}
 	}
 

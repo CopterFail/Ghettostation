@@ -155,8 +155,8 @@ uint16_t cRX5808::ui16GetRssi( uint8_t ui8Receiver )
 	    rssi += analogRead( ui8Receiver ? ADC_RSSI_B : ADC_RSSI_A );
 	}
 	rssi = rssi/10;
-	if( rssi > ui16MaxRssi ) ui16MaxRssi = rssi;
-	else if( rssi < ui16MinRssi ) ui16MinRssi = rssi;
+	//if( rssi > ui16MaxRssi ) ui16MaxRssi = rssi;
+	//else if( rssi < ui16MinRssi ) ui16MinRssi = rssi;
 	aui8Rssi[ui8ActiveChannel & 0x1f] = rssi;
 	//rssi = map( rssi, ui16MinRssi, ui16MaxRssi, 0, 100);
 	return rssi;

@@ -318,8 +318,8 @@ static void vUpdateGlobalData( void )
 	if( home_pos )
 	{
 		// fly circles (r=1km) around the home pos...
-		uav_lat += 1e7 * 0.01113195 * sin(w);
-		uav_lon += 1e7 * 0.01113195 * cos(w);
+		uav_lat += 1e7 * 0.01113195 * sin(w); // north
+		uav_lon += 1e7 * 0.01113195 * cos(w); // east
 
 		// 0 .. 1000m height depend on pan angle...
 		uav_alt = (int32_t)(50000.0 * ( 1 + sin(w) ) );

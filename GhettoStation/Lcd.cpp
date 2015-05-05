@@ -117,7 +117,7 @@ void vShowGpsData( void )
 	{
 		sprintf(currentline, "3D FIX! Alt:%dm",(int16_t)round(uav_alt/100.0f));  
 		tft.println(currentline);			
-        sprintf(currentline,"%s %s", dtostrf(uav_lat/10000000.0, 5, 5, bufferl),dtostrf(uav_lon/10000000.0, 5, 5, bufferL));
+        sprintf(currentline,"N%s E%s", dtostrf(uav_lat/10000000.0, 5, 5, bufferl),dtostrf(uav_lon/10000000.0, 5, 5, bufferL));
 		tft.println(currentline);	
 	}
 	else
@@ -172,7 +172,7 @@ void vShowPosition( int16_t i16Bearing, int16_t i16Dist, int16_t i16HBering )
 	static uint32_t ui32LastMillis=0;
 
 	int16_t x0,y0,x1,y1,x2,y2;
-	float ftmp;
+	float ftmp, fr;
 
 	if( ( millis() - ui32LastMillis ) < 500 ) return;
 	if( (i16LastBearing == i16Bearing) && (i16LastDist == i16Dist) ) return;
@@ -185,13 +185,11 @@ void vShowPosition( int16_t i16Bearing, int16_t i16Dist, int16_t i16HBering )
 	x0 = 160/2;
 	y0 = 128/2;
 
-	ftmp = sin(float(i16Bearing)/180.0*M_PI)*float(i16Dist);
-	if( ftmp > (x0-10) ) ftmp = (x0-10);
-	if( ftmp < -(x0-10) ) ftmp = -(x0-10);
+	fr = float(i16Dist);
+	if( fr > 70.0f ) fr = 70.0f;
+	ftmp = sin(float(i16Bearing)/180.0*M_PI)*fr;
 	x1 = (int16_t)ftmp;
-	ftmp = -cos(float(i16Bearing)/180.0*M_PI)*float(i16Dist);
-	if( ftmp > (y0-10) ) ftmp = (y0-10);
-	if( ftmp < -(y0-10) ) ftmp = -(y0-10);
+	ftmp = -cos(float(i16Bearing)/180.0*M_PI)*fr;
 	y1 = (int16_t)ftmp;
 
 	ftmp = sin(float(i16HBering)/180.0*M_PI)*40.0;
