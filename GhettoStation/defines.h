@@ -8,7 +8,7 @@
 #ifndef DEFINES_H_
 #define DEFINES_H_
 
-#define GHETTO_DEBUG
+//#define GHETTO_DEBUG
 
 /* ########################################  PROTOCOL ######################################################*/
 #define PROTOCOL_UAVTALK                        // OpenPilot / Taulabs protocol
@@ -58,7 +58,7 @@
 #define PASSIVEMODE 0
 
 // Default tilt angle used when not tracking (parking position).
-#define DEFAULTELEVATION  	15
+#define DEFAULTELEVATION  	5
 #define DEFAULTBEARING  	0
 
 //Memory bank name to display on LCD (18 char max)

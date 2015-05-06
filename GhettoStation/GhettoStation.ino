@@ -359,7 +359,8 @@ void check_activity(void)
                     EEPROM_write(config_bank[int(current_bank)], configuration);
                     detach_servo(pan_servo);
                     attach_servo(pan_servo, PAN_SERVOPIN, configuration.pan_minpwm, configuration.pan_maxpwm);
-                    move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
+                    //move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
+                    vParkServos();
                     current_activity=ActMenu;
                 }
                 break;
@@ -370,7 +371,8 @@ void check_activity(void)
                 if (buttonEnter.holdTime() >= 700 && buttonEnter.held()) //long press
 				{
                     EEPROM_write(config_bank[int(current_bank)], configuration);
-                    move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
+                    //move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
+                    vParkServos();
                     current_activity=ActMenu;
                 }
                 break;
@@ -390,7 +392,8 @@ void check_activity(void)
                 EEPROM_write(config_bank[int(current_bank)], configuration);
                 detach_servo(pan_servo);
                 attach_servo(pan_servo, PAN_SERVOPIN, configuration.pan_minpwm, configuration.pan_maxpwm);
-                move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
+                //move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
+                vParkServos();
                 current_activity=ActMenu;
             }
             break;
@@ -402,7 +405,8 @@ void check_activity(void)
              if (buttonEnter.holdTime() >= 700 && buttonEnter.held()) //long press
 			 {   
                 EEPROM_write(config_bank[int(current_bank)], configuration);
-                move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
+                //move_servo(pan_servo, 1, 0, configuration.pan_minangle, configuration.pan_maxangle);
+                vParkServos();
                 current_activity=ActMenu;
             }
             break;
@@ -422,7 +426,8 @@ void check_activity(void)
                 EEPROM_write(config_bank[int(current_bank)], configuration);
                 detach_servo(tilt_servo);
 				attach_servo(tilt_servo,TILT_SERVOPIN, configuration.tilt_minpwm, configuration.tilt_maxpwm);
-                move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);;
+                //move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);;
+				vParkServos();
                 current_activity=ActMenu;
             }
             break;
@@ -433,7 +438,8 @@ void check_activity(void)
             if (buttonEnter.holdTime() >= 700 && buttonEnter.held()) //long press
 			{
                 EEPROM_write(config_bank[int(current_bank)], configuration);
-                move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);
+                //move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);
+                vParkServos();
                 current_activity=ActMenu;
             }
             break;
@@ -453,7 +459,8 @@ void check_activity(void)
                 EEPROM_write(config_bank[int(current_bank)], configuration);
                 detach_servo(tilt_servo);
 				attach_servo(tilt_servo,TILT_SERVOPIN, configuration.tilt_minpwm, configuration.tilt_maxpwm);
-                move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);
+                //move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);
+				vParkServos();
                 current_activity=ActMenu;
             }
             break;
@@ -464,7 +471,8 @@ void check_activity(void)
             if (buttonEnter.holdTime() >= 700 && buttonEnter.held()) //long press
 			{
                 EEPROM_write(config_bank[int(current_bank)], configuration);
-                move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);
+                //move_servo(tilt_servo, 2, 0, configuration.tilt_minangle, configuration.tilt_maxangle);
+                vParkServos();
                 current_activity=ActMenu;
             }
             break;
@@ -536,11 +544,11 @@ void check_activity(void)
             }
             break;
         case ActSetChannel:               //Config video channel
-        	RX5808.vSelectChannel( configuration.channel );
-          	vShowSpectrum( RX5808.pui16GetAllRSSI(), configuration.channel);
+          	vShowSpectrum();
             if (buttonEnter.holdTime() >= 700 && buttonEnter.held()) //long press
 			{
                 EEPROM_write(config_bank[int(current_bank)], configuration);
+                RX5808.vSelectChannel( configuration.channel );
                 current_activity=ActMenu;
             }
             break;
@@ -872,7 +880,7 @@ void configure_voltage_ratio(MenuItem* p_menu_item)
 void configure_channel( MenuItem* p_menu_item )
 {
 	current_activity = ActSetChannel;
-	vShowSpectrum( RX5808.pui16GetAllRSSI(), configuration.channel );
+	vShowSpectrum();
 }
 void configure_receiver( MenuItem* p_menu_item )
 {
@@ -971,51 +979,7 @@ void get_telemetry(void)
 #endif
 }
 
-//void telemetry_off() {
-//  //reset uav data
-//  uav_lat = 0;
-//  uav_lon = 0;                    
-//  uav_satellites_visible = 0;     
-//  uav_fix_type = 0;               
-//  uav_alt = 0;                    
-//  uav_groundspeed = 0;
-//  protocol = "";
-//  telemetry_ok = false;
-//  home_sent = 0;
-//  }
-  
 //######################################## SERVOS #####################################################################
-
-
-
-void move_servo(Servo &s, int stype, int a, int mina, int maxa)
-{
-	int microsec;
-    if (stype == 1) 
-	{
-        //convert angle for pan to pan servo reference point: 0° is pan_minangle
-        if (a <= 180) 
-		{
-            a = mina + a;
-        } 
-		else if ((a > 180) && (a < (360-mina))) 
-		{
-           //relevant only for 360° configs
-            a = a - mina;
-        } else if ((a > 180) && (a > (360-mina)))
-            a = mina - (360-a);         
-        // map angle to microseconds
-        //microsec = map(a, 0, mina+maxa, configuration.pan_minpwm, configuration.pan_maxpwm);
-        microsec = map(a, 0, mina+maxa, configuration.pan_maxpwm, configuration.pan_minpwm);	// pan servo move counter clockwise....
-        s.writeMicroseconds( microsec );
-    }
-    else if (stype == 2)
-	{
-        //map angle to microseconds
-        microsec = map(a, mina, maxa, configuration.tilt_minpwm, configuration.tilt_maxpwm);
-        s.writeMicroseconds( microsec );
-    }
-}
 
 void attach_servo(Servo &s, int p, int min, int max) {
  // called at setup() or after a servo configuration change in the menu
@@ -1035,75 +999,63 @@ void detach_servo(Servo &s)
 }
 
 
-
-void servoPathfinder(int angle_b, int angle_a)	// ( bearing, elevation )
+void servoPathfinder(int16_t i16b, int16_t i16a) // ( bearing, elevation, valid interval is: 0 .. 359, min < max )
 {   
 //find the best way to move pan servo considering 0° reference face toward
-    if (angle_b <= 180) 
-	{
-        if ( configuration.pan_maxangle >= angle_b ) 
-		{
-        //define limits
-        if (angle_a <= configuration.tilt_minangle) 
-		{
-        // checking if we reach the min tilt limit
-            angle_a = configuration.tilt_minangle;
-        } 
-		else if (angle_a >configuration.tilt_maxangle) 
-		{
-            //shouldn't happend but just in case
-            angle_a = configuration.tilt_maxangle;
-			}
-        } 
-		else if ( configuration.pan_maxangle < angle_b ) //relevant for 180° tilt config only, in case bearing is superior to pan_maxangle
-		{
-			angle_b = 180+angle_b;
-            if (angle_b >= 360) 
-			{
-                angle_b = angle_b - 360;
-            }
-            // invert pan axis 
-            if ( configuration.tilt_maxangle >= ( 180-angle_a )) 
-			{
-                // invert pan & tilt for 180° Pan 180° Tilt config
-                angle_a = 180-angle_a;
-            }
-            else if (configuration.tilt_maxangle < ( 180-angle_a )) 
-			{
-                // staying at nearest max pos
-                angle_a = configuration.tilt_maxangle;
-            }
-        }
-    }
-    else if ( angle_b > 180 ) 
-	{
-        if( configuration.pan_minangle > 360-angle_b ) 
-		{
-            if (angle_a < configuration.tilt_minangle) 
-			{
-                // checking if we reach the min tilt limit
-                angle_a = configuration.tilt_minangle;
-            }
-        } 
-		else if ( configuration.pan_minangle <= 360-angle_b ) 
-		{
-            angle_b = angle_b - 180;
-            if ( configuration.tilt_maxangle >= ( 180-angle_a )) 
-			{
-                // invert pan & tilt for 180/180 conf
-                angle_a = 180-angle_a;
-            }
-            else if (configuration.tilt_maxangle < ( 180-angle_a)) 
-			{
-                // staying at nearest max pos
-                angle_a = configuration.tilt_maxangle;
-            }
-        }
-    }    
-    move_servo(pan_servo, 1, angle_b, configuration.pan_minangle, configuration.pan_maxangle);
-    move_servo(tilt_servo, 2, angle_a, configuration.tilt_minangle, configuration.tilt_maxangle);
-}
+	static bool inverse = false;
+	int16_t i16PanRange,i16PanRangeInv;
+	int16_t microsec;
 
+	// Pan calculation:
+
+	i16b -= home_bearing;				// home_bearing is the direction to N
+	i16b -= configuration.pan_minangle;	// now calculations start at 0
+
+	while( i16b < 0 ) 		i16b += 360;
+	while( i16b > 359 ) 	i16b -= 360;
+
+	i16PanRange = configuration.pan_maxangle - configuration.pan_minangle;	// i16PanRange is expected to be 0..180
+	i16PanRangeInv = i16PanRange + 180;										// i16PanRangeInv is expected to be <360
+
+
+	if( (i16b >= 0) && (i16b < i16PanRange) )
+	{
+		// i16b need no change, can be direct accessed by the servo
+		inverse = false;
+	}
+	else if( (i16b >= 180) && (i16b <= i16PanRangeInv) )
+	{
+		// can be accessed with inverted tilt, i16b need a 180 deg shift
+		i16b -= 180;
+		inverse = true;
+	}
+	else if( (i16b >= i16PanRange) && (i16b < 180) )
+	{
+		// angle cannot be reached, stay at the border with the latest inverse state
+		if( inverse ) i16b = 0;
+		else i16b = i16PanRange;
+	}
+	else if( (i16b >= i16PanRangeInv) && (i16b < 360) )
+	{
+		// angle cannot be reached, stay at the border with the latest inverse state
+		if( !inverse ) i16b = 0;
+		else i16b = i16PanRange;
+	}
+
+	// Tilt calculation:
+	if( inverse ) i16a = 180 - i16a;
+	if( i16a < configuration.tilt_minangle )	i16a = configuration.tilt_minangle;
+	if( i16a > configuration.tilt_maxangle )	i16a = configuration.tilt_maxangle;
+
+
+    // write the servos:
+	//microsec = map(a, 0, i16PanRange, configuration.pan_minpwm, configuration.pan_maxpwm);
+    microsec = map(i16b, 0, i16PanRange, configuration.pan_maxpwm, configuration.pan_minpwm);	// pan servo move counter clockwise....
+	pan_servo.writeMicroseconds( microsec );
+
+    microsec = map(i16a, configuration.tilt_minangle, configuration.tilt_maxangle, configuration.tilt_minpwm, configuration.tilt_maxpwm);		// tilt servo
+	tilt_servo.writeMicroseconds( microsec );
+}
 
 
 void test_servos(void) 
@@ -1170,7 +1122,7 @@ void test_servos(void)
 
 void vParkServos( void )
 {
-	servoPathfinder( DEFAULTBEARING, DEFAULTELEVATION );
+	servoPathfinder( DEFAULTBEARING+home_bearing, DEFAULTELEVATION );
 }
 
 //######################################## TRACKING #############################################
@@ -1183,12 +1135,6 @@ void antenna_tracking(void)
 	{  
         rel_alt = uav_alt - home_alt; // relative altitude to ground in decimeters
         calc_tracking( home_lon, home_lat, uav_lon, uav_lat, rel_alt); //calculate tracking bearing/azimuth
-        //set current GPS bearing relative to home_bearing
-		Bearing -= home_bearing;
-        if(Bearing < 0)
-		{
-			Bearing += 360;
-        }
     } 
 }
 

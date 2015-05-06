@@ -32,25 +32,30 @@ const uint16_t channelFreqTable[] {
 
 cRX5808::cRX5808()
 {
+	uint8_t ui8Channel;
+	pinMode( PIN_RX_SPI_LE, OUTPUT);
+	pinMode( PIN_RX_SPI_CLK, OUTPUT);
+	pinMode( PIN_RX_SPI_DATA, OUTPUT);
 
-	  pinMode( PIN_RX_SPI_LE, OUTPUT );
-	  pinMode( PIN_RX_SPI_CLK, OUTPUT );
-	  pinMode( PIN_RX_SPI_DATA, OUTPUT );
+	pinMode( PIN_ENABLE_RX_A, OUTPUT);
+	pinMode( PIN_ENABLE_RX_B, OUTPUT);
 
-	  pinMode( PIN_ENABLE_RX_A, OUTPUT );
-	  pinMode( PIN_ENABLE_RX_B, OUTPUT );
+	digitalWrite(PIN_RX_SPI_LE, LOW);
+	digitalWrite(PIN_RX_SPI_CLK, LOW);
+	digitalWrite(PIN_RX_SPI_DATA, LOW);
 
-	  digitalWrite(PIN_RX_SPI_LE, LOW);
-	  digitalWrite(PIN_RX_SPI_CLK, LOW);
-	  digitalWrite(PIN_RX_SPI_DATA, LOW);
+	ui8ActiveChannel = 255;	// none
+	ui8ActiveReceiver = 255;	// none
+	ui16MaxRssi = 310; // 1V with 3V3 Referenz: 1 * 1024 / 3,3 = 310
+	ui16MinRssi = 16; // 0.5V
 
-	  ui8ActiveChannel = 255;	// none
-	  ui8ActiveReceiver = 255;	// none 
-	  ui16MaxRssi = 310; // 1V with 3V3 Referenz: 1 * 1024 / 3,3 = 310
-	  ui16MinRssi = 16; // 0.5V
-	  
-	  vSelectReceiver( 0 );
-	  vSelectChannel( 0 );
+	for (ui8Channel = 0; ui8Channel < CHANNELCOUNT; ui8Channel++)
+	{
+		aui8Rssi[ui8Channel] = ui16MinRssi;
+	}
+
+	vSelectReceiver(0);
+	vSelectChannel(0);
 
 }
 

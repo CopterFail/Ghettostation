@@ -141,27 +141,41 @@ void vShowRssi( void )
   tft.println( ui16Val );
 }
 
-void vShowSpectrum( uint16_t *data, uint8_t channel )
+void vShowSpectrum( void )
 {
 	uint8_t y;
 	uint16_t color;
+	static uint8_t ui8ScanChannel = 0;
+	uint16_t *data;
+	uint8_t ui8Rx = RX5808.ui8GetReceiver();
 
-	channel++;
+
+	RX5808.vSelectChannel( ui8ScanChannel );
+	delay(150);
+	RX5808.ui16GetRssi( ui8Rx );
+	data = RX5808.pui16GetAllRSSI();
+
 	tft.fillRect( 0, 64, 160, 64, ST7735_BLACK );
 	for( uint8_t i=1U; i<33U; i++ )
 	{
-		if( i==channel )
+		if( i==configuration.channel+1 )
 			color = ST7735_RED;
+		else if( i==ui8ScanChannel+1 )
+			color = ST7735_YELLOW;
 		else
 			color = ST7735_GREEN;
 		y = (uint8_t) map( *data, RX5808.ui16GetMinRssi(), RX5808.ui16GetMaxRssi(), 0, 50 );
+		if( y > 51 ) y = 51;
 		tft.fillRect( i<<2, 115-y, 4, y, color );
 		data++;
 	}
 	tft.setTextColor( ST7735_RED );
 	tft.setTextSize(2);
+	tft.setCursor( 134, 70 );
+	tft.print(ui8Rx);
 	tft.setCursor( 134, 86 );
-	tft.print(channel);
+	tft.print(configuration.channel+1);
+	ui8ScanChannel = (ui8ScanChannel+1) & 0x1f;
 	vShowSoftkeys( "PREV","EXIT","NEXT" );
 }
 
@@ -186,7 +200,7 @@ void vShowPosition( int16_t i16Bearing, int16_t i16Dist, int16_t i16HBering )
 	y0 = 128/2;
 
 	fr = float(i16Dist);
-	if( fr > 70.0f ) fr = 70.0f;
+	if( fr > 65.0f ) fr = 65.0f;
 	ftmp = sin(float(i16Bearing)/180.0*M_PI)*fr;
 	x1 = (int16_t)ftmp;
 	ftmp = -cos(float(i16Bearing)/180.0*M_PI)*fr;
@@ -279,11 +293,12 @@ void init_lcdscreen( void )
   tft.println("Rev 1.0.0-dev");
   
   vShowBattery();
-  tft.println("Scan video channels...");
+  //tft.println("Scan video channels...");
   vShowSoftkeys( "","WAIT","" );
 
   RX5808.vSelectReceiver(0);
-  RX5808.ui8ScanChannels(1);
+  //RX5808.ui8ScanChannels(1);
+  RX5808.vSelectChannel( configuration.channel );
   
   bMenuUpdate=true;
   bDataUpdate=true;
