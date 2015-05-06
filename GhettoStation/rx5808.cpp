@@ -12,6 +12,8 @@
 #include "boards.h"
 #include "rx5808.h"
 
+#define DIVERSITY_HYSTERESIS	30	// 0.1V
+
 // Channels to sent to the SPI registers
 const uint16_t channelTable[] {
   // Channel 1 - 8
@@ -44,8 +46,9 @@ cRX5808::cRX5808()
 	digitalWrite(PIN_RX_SPI_CLK, LOW);
 	digitalWrite(PIN_RX_SPI_DATA, LOW);
 
-	ui8ActiveChannel = 255;	// none
+	ui8ActiveChannel = 255;		// none
 	ui8ActiveReceiver = 255;	// none
+	ui8ActiveDiversity = 0;		// off
 	ui16MaxRssi = 310; // 1V with 3V3 Referenz: 1 * 1024 / 3,3 = 310
 	ui16MinRssi = 16; // 0.5V
 
@@ -150,6 +153,18 @@ void cRX5808::vSelectChannel( uint8_t ui8NewChannel )
 	ui8ActiveChannel = ui8NewChannel;
 }
 
+void cRX5808::vSelectDiversity( uint8_t ui8Diversity )
+{
+	if(ui8Diversity)
+	{
+		ui8ActiveDiversity = 1;
+	}
+	else
+	{
+		ui8ActiveDiversity = 0;
+	}
+
+}
 uint16_t cRX5808::ui16GetRssi( uint8_t ui8Receiver )
 {
 	uint16_t rssi = 0;
@@ -193,16 +208,23 @@ uint8_t cRX5808::ui8ScanChannels( uint8_t ui8Set )
 
 void cRX5808::vDiversity( void )
 {
-	#define HYSTERESIS	30	// 0.1V
-	int16_t i16RssiA = (int16_t)ui16GetRssi( 0 );
-	int16_t i16RssiB = (int16_t)ui16GetRssi( 1 );
-	int16_t idiff = i16RssiA - i16RssiB;
+	int16_t i16RssiA;
+	int16_t i16RssiB;
+	int16_t idiff;
+
+	if( 0 == ui8ActiveDiversity ) return;
+
+	i16RssiA += (int16_t)ui16GetRssi( 0 );
+	i16RssiB += (int16_t)ui16GetRssi( 1 );
+	i16RssiA >>= 1;
+	i16RssiB >>= 1;
+	idiff = i16RssiA - i16RssiB;
 	
-	if( (idiff > HYSTERESIS) && (ui8ActiveReceiver == 1) )
+	if( (idiff > DIVERSITY_HYSTERESIS) && (ui8ActiveReceiver == 1) )
 	{
 		vSelectReceiver( 0 );
 	}
-	else if( (idiff < -HYSTERESIS) && (ui8ActiveReceiver == 0) )
+	else if( (idiff < -DIVERSITY_HYSTERESIS) && (ui8ActiveReceiver == 0) )
 	{
 		vSelectReceiver( 1 );
 	}

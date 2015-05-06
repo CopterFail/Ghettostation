@@ -261,6 +261,7 @@ while( OSD_SERIAL.available() ){
         #endif
 
         Buzzer.vUpdate();
+        RX5808.vDiversity();
     }
 	
     if (loop50hz.check() == 1) 
@@ -890,7 +891,10 @@ void configure_receiver( MenuItem* p_menu_item )
 }
 void configure_diversity( MenuItem* p_menu_item )
 {
-	current_activity = ActSetDiversity;
+	//current_activity = ActSetDiversity;
+	if(RX5808.ui8GetDiversity()>0) RX5808.vSelectDiversity(0);
+	else RX5808.vSelectDiversity(1);
+
 }
 
 //######################################## TELEMETRY FUNCTIONS #############################################
