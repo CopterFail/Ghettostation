@@ -328,11 +328,13 @@ void check_activity(void)
 				{					
                     lcddisp_sethome();
 				}
-                else if (home_pos) 
+                else
 				{
                     if (!home_bear) 
 					{ 
                         lcddisp_setbearing();   
+                        servoPathfinder(0, DEFAULTELEVATION);
+                        delay(200);
                     }
                     else 
 					{
@@ -594,7 +596,7 @@ void enterButtonReleaseEvents(Button &btn)
                 switch (configuration.bearing_method) 
 				{
                     case 1: 
-                        home_bearing = calc_bearing(home_lon, home_lat, uav_lon, uav_lat); // store bearing relative to north
+                        home_bearing += calc_bearing(home_lon, home_lat, uav_lon, uav_lat); // store bearing relative to north
                         home_bear = true;
                         break;
                     case 2:
@@ -603,7 +605,7 @@ void enterButtonReleaseEvents(Button &btn)
                         home_bear = true;
                         break;
                     default: 
-                        configuration.bearing_method = 1; // shouldn't happened, restoring default value.
+                        configuration.bearing_method = 2; // shouldn't happened, restoring default value.
                         break;
                 }
                 configuration.bearing = home_bearing;
@@ -886,15 +888,30 @@ void configure_channel( MenuItem* p_menu_item )
 void configure_receiver( MenuItem* p_menu_item )
 {
 	//current_activity = ActSetReceiver;
-	if(RX5808.ui8GetReceiver()>0) RX5808.vSelectReceiver(0);
-	else RX5808.vSelectReceiver(1);
+	if(RX5808.ui8GetReceiver()>0)
+	{
+		RX5808.vSelectReceiver(0);
+		vShowMessage( "Receiver 0", 2, 1000 );
+	}
+	else
+	{
+		RX5808.vSelectReceiver(1);
+		vShowMessage( "Receiver 1", 2, 1000 );
+	}
 }
 void configure_diversity( MenuItem* p_menu_item )
 {
 	//current_activity = ActSetDiversity;
-	if(RX5808.ui8GetDiversity()>0) RX5808.vSelectDiversity(0);
-	else RX5808.vSelectDiversity(1);
-
+	if(RX5808.ui8GetDiversity()>0)
+	{
+		RX5808.vSelectDiversity(0);
+		vShowMessage( "Diversity OFF", 2, 1000 );
+	}
+	else
+	{
+		RX5808.vSelectDiversity(1);
+		vShowMessage( "Diversity ON", 2, 1000 );
+	}
 }
 
 //######################################## TELEMETRY FUNCTIONS #############################################
@@ -1142,15 +1159,12 @@ void antenna_tracking(void)
     } 
 }
 
-
-
 void calc_tracking(int32_t lon1, int32_t lat1, int32_t lon2, int32_t lat2, int32_t alt) 
 {
     //calculating Bearing & Elevation  in degree decimal
     Bearing = calc_bearing(lon1,lat1,lon2,lat2);
     Elevation = calc_elevation(alt);
 }
-
 
 int16_t calc_bearing(int32_t lon1, int32_t lat1, int32_t lon2, int32_t lat2) 
 {

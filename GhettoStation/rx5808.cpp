@@ -206,6 +206,15 @@ uint8_t cRX5808::ui8ScanChannels( uint8_t ui8Set )
 	return ui8Best;
 }
 
+void cRX5808::vCalibrateRssi( void )
+{
+	// todo:
+	// clear the values
+	// scan the channels
+	// update lower boundary
+	// save the data
+}
+
 void cRX5808::vDiversity( void )
 {
 	int16_t i16RssiA;

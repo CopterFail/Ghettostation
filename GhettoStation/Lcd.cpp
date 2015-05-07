@@ -236,7 +236,16 @@ void vShowPosition( int16_t i16Bearing, int16_t i16Dist, int16_t i16HBering )
 	tft.setCursor( 0, 128-2*8 );
 	tft.setTextSize(1);
 	vShowGpsData();
+}
 
+void vShowMessage( char *text, uint8_t size, uint16_t time  )
+{
+	tft.fillScreen(BLACK);
+	tft.setTextColor(WHITE);
+	tft.setCursor(0, 50);
+	tft.setTextSize(size);
+	tft.print(text);
+	delay( time );
 }
 
 void showMenu( void )
@@ -288,8 +297,10 @@ void init_lcdscreen( void )
   tft.setTextWrap(false);
   
   tft.setTextSize(2); // 1=5x7, 2=10x14
-  tft.println("FPV STATION");
+  tft.println("  OPEN  FPV" );
+  tft.println("   STATION");
   tft.setTextSize(1);
+  tft.println("");
   tft.println("Rev 1.0.0-dev");
   
   vShowBattery();
@@ -321,7 +332,7 @@ void lcddisp_sethome( void )
 	vShowGpsData();
 	if (!gps_fix)
 	{
-		tft.println("WAITING");
+		tft.println("WAITING FOR GPS DATA");
 	}
 	vShowSoftkeys( "","EXIT","" );
 }
@@ -330,19 +341,25 @@ void lcddisp_setbearing( void )
 {
     switch (configuration.bearing_method) {
         case 1:
-        	break;
         case 2:
-            if (buttonUp.holdTime() >= 700 && buttonUp.isPressed() ) {
-                home_bearing+=10;
-                if (home_bearing > 359) 
-                    home_bearing = 0;
-                delay(500);
-                }
-            else if ( buttonDown.holdTime() >= 700 && buttonDown.isPressed() ) {
-                home_bearing-=10;
+        	if( buttonUp.isPressed() )
+			{
+        		if( buttonUp.holdTime() >= 700 )
+        			home_bearing+=10;
+        		else
+        			home_bearing+=1;
+        		if (home_bearing > 359)
+        			home_bearing = 0;
+
+			}
+            else if ( buttonDown.isPressed() )
+            {
+            	if( buttonDown.holdTime() >= 700 )
+            		home_bearing-=10;
+            	else
+            		home_bearing-=1;
                 if (home_bearing < 0) 
                     home_bearing = 359;
-                delay(500);   
             }
             break;
         case 3:
@@ -357,15 +374,31 @@ void lcddisp_setbearing( void )
 	
 	vPrepareDataSection();
 	vShowGpsStatus();
+	switch (configuration.bearing_method)
+	{
+	case 1:
+		tft.println("Point antenna to UAV (20m)");
+		break;
+	case 2:
+		tft.println("Point antenna to north");
+		break;
+	case 3:
+		tft.println("UAV & antenna same dir");
+		break;
+	case 4:
+		tft.println("Internal mag");
+		break;
+
+	}
 	if (configuration.bearing_method != 1) 
 	{
 		tft.println("Set Heading");
 	}
 	
-	tft.print("Home bearing [°]: ");
+	tft.print("Home bearing: ");
 	tft.println(home_bearing);
 	
-	if (configuration.bearing_method == 2)
+	if (configuration.bearing_method <= 2)
 	{
 		vShowSoftkeys( "-","SELECT","+" );
 	}
@@ -390,7 +423,7 @@ void lcddisp_homeok( void )
     }
     tft.println("HOME IS SET");
     tft.println("Enter:Start Tracking");
-    vShowSoftkeys( "MENU","TRACKING","RESET" );
+    vShowSoftkeys( "RESET","TRACKING","MENU" );
 }
 
 void lcddisp_tracking( uint8_t ui8Mode )
@@ -487,11 +520,11 @@ void lcddisp_bearing_method( void )
 	
     switch (configuration.bearing_method) 
 	{
-    case 1:	tft.println("GPS (set uav 20m from home)"); break;
+    case 1:	tft.println("Antenna point to UAV(20m)"); break;
     default: configuration.bearing_method = 2;
-    case 2:	tft.println("MANUAL"); break;
-    case 3:	tft.println("UAV HEADING"); break;
-    case 4:	tft.println("MAG"); break;
+    case 2:	tft.println("Anenna point north"); break;
+    case 3:	tft.println("UAV heading"); break;
+    case 4:	tft.println("Internal MAG"); break;
 	}
 	vShowSoftkeys( "PREV","SELECT","NEXT" );
 }

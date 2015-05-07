@@ -35,6 +35,7 @@ public:
 	uint8_t ui8GetReceiver( void ){ return ui8ActiveReceiver; }
 	uint8_t ui8GetDiversity( void ){ return ui8ActiveDiversity; }
 	uint8_t ui8ScanChannels( uint8_t ui8Set );
+	void vCalibrateRssi( void );
 	uint16_t *pui16GetAllRSSI( void ){ return aui8Rssi; }
 	void vDiversity( void );
 
