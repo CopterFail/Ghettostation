@@ -12,7 +12,7 @@
 typedef enum tActivity { ActMenu=0, ActTrack, ActSetHome,
 	ActPanMinPwm, ActPanMinAngle, ActPanMaxPwm,	ActPanMaxAngle,
 	ActTiltMinPwm, ActTiltMinAngle, ActTiltMaxPwm, ActTiltMaxAngle,
-	ActTestServo, ActManualServo,
+	ActTestServo,
 	ActSetTelemetrie,	ActSetBaud, ActSetBank,
 	ActSetOsd, ActSetBearing, ActSetVoltage,
 	ActSetChannel, ActSetReceiver, ActSetDiversity

@@ -26,7 +26,6 @@ Menu m1m3Menu("CONFIG");
 			MenuItem m1m3m1m2l3Item("MINANGLE");
 			MenuItem m1m3m1m2l4Item("MAXANGLE");
 		MenuItem m1m3m1i3Item("TEST");
-		MenuItem m1m3m1i4Item("MANUAL");
 	Menu m1m3m2Menu("TELEMETRY");
 		MenuItem m1m3m2i1Item("PROTOCOL");
 		MenuItem m1m3m2i2Item("BAUDRATE");

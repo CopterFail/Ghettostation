@@ -13,7 +13,7 @@ void showMenu( void );
 
 void vUpdateMenu( void );
 void vUpdateData( void );
-void vShowSpectrum( void );
+void vShowSpectrum( uint8_t uimode );
 void vShowMessage( char *text, uint8_t size, uint16_t time );
 
 void init_lcdscreen( void );

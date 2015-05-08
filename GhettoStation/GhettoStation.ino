@@ -4,7 +4,7 @@
  * @file       GhettoStation.ino
  * @author     Guillaume S
  * @brief      Arduino based antenna tracker & telemetry display for UAV projects.
- * @project    https://code.google.com/p/ghettostation/
+ * @project    https://github.com/CopterFail/Ghettostation
  * 
  *             
  *             
@@ -122,6 +122,7 @@ int16_t Elevation;
 //int16_t servoElevation=0;
 
 static uint8_t trackingDisplay = 0U;
+static uint8_t ui8Scanmode = 0U;
 
 tActivity current_activity;
 //int current_activity = 0; // Activity status 0: Menu , 1: Track, 2: SET_HOME, 3: PAN_MINPWM, 4: PAN_MINANGLE, 5: PAN_MAXPWM,
@@ -189,6 +190,9 @@ void setup() {
     servoconf_tmp[1] = configuration.pan_maxpwm;
     servoconf_tmp[2] = configuration.tilt_minpwm;
     servoconf_tmp[3] = configuration.tilt_maxpwm;
+    RX5808.vSelectChannel(configuration.channel);
+    RX5808.vSelectReceiver(configuration.receiver);
+    RX5808.vSelectDiversity(configuration.diversity);
     home_bearing = configuration.bearing; // use last bearing position of previous session.
     voltage_ratio = (float)(configuration.voltage_ratio/100.0);
     delay(20);
@@ -516,6 +520,11 @@ void check_activity(void)
                 servoconf_tmp[1] = configuration.pan_maxpwm;
                 servoconf_tmp[2] = configuration.tilt_minpwm;
                 servoconf_tmp[3] = configuration.tilt_maxpwm;
+
+                RX5808.vSelectChannel(configuration.channel);
+                RX5808.vSelectReceiver(configuration.receiver);
+                RX5808.vSelectDiversity(configuration.diversity);
+
                 home_sent = 0;
                 current_activity=ActMenu;
             }
@@ -547,7 +556,7 @@ void check_activity(void)
             }
             break;
         case ActSetChannel:               //Config video channel
-          	vShowSpectrum();
+          	vShowSpectrum( ui8Scanmode );
             if (buttonEnter.holdTime() >= 700 && buttonEnter.held()) //long press
 			{
                 EEPROM_write(config_bank[int(current_bank)], configuration);
@@ -578,6 +587,11 @@ void enterButtonReleaseEvents(Button &btn)
         else if ( current_activity == ActTrack )
         {
         	trackingDisplay = 1 - trackingDisplay;
+        }
+        else if ( current_activity == ActSetChannel )
+        {
+        	ui8Scanmode = 1 - ui8Scanmode;
+       		RX5808.vCalibrateRssi( ui8Scanmode );
         }
         else if ( current_activity == ActSetHome ) 
 		{
@@ -765,7 +779,6 @@ void init_menu() {
                 m1m3m1m2Menu.add_item(&m1m3m1m2l3Item, &configure_tilt_minangle); // tilt min angle
                 m1m3m1m2Menu.add_item(&m1m3m1m2l4Item, &configure_tilt_maxangle); // tilt max angle
                 m1m3m1Menu.add_item(&m1m3m1i3Item, &configure_test_servo); // servo test
-                m1m3m1Menu.add_item(&m1m3m1i4Item, &configure_manual_servo); // servo manual
         m1m3Menu.add_menu(&m1m3m2Menu);  //Telemetry
             m1m3m2Menu.add_item(&m1m3m2i1Item, &configure_telemetry); // select telemetry protocol ( Teensy++2 only ) 
             m1m3m2Menu.add_item(&m1m3m2i2Item, &configure_baudrate); // select telemetry protocol
@@ -883,35 +896,39 @@ void configure_voltage_ratio(MenuItem* p_menu_item)
 void configure_channel( MenuItem* p_menu_item )
 {
 	current_activity = ActSetChannel;
-	vShowSpectrum();
+	vShowSpectrum( ui8Scanmode );
 }
 void configure_receiver( MenuItem* p_menu_item )
 {
 	//current_activity = ActSetReceiver;
 	if(RX5808.ui8GetReceiver()>0)
 	{
-		RX5808.vSelectReceiver(0);
+		configuration.receiver = 0;
 		vShowMessage( "Receiver 0", 2, 1000 );
 	}
 	else
 	{
-		RX5808.vSelectReceiver(1);
+		configuration.receiver = 1;
 		vShowMessage( "Receiver 1", 2, 1000 );
 	}
+	RX5808.vSelectReceiver(configuration.receiver);
+	EEPROM_write(config_bank[int(current_bank)], configuration);
 }
 void configure_diversity( MenuItem* p_menu_item )
 {
 	//current_activity = ActSetDiversity;
 	if(RX5808.ui8GetDiversity()>0)
 	{
-		RX5808.vSelectDiversity(0);
+		configuration.diversity = 0;
 		vShowMessage( "Diversity OFF", 2, 1000 );
 	}
 	else
 	{
-		RX5808.vSelectDiversity(1);
+		configuration.diversity = 1;
 		vShowMessage( "Diversity ON", 2, 1000 );
 	}
+	RX5808.vSelectDiversity(configuration.diversity);
+	EEPROM_write(config_bank[int(current_bank)], configuration);
 }
 
 //######################################## TELEMETRY FUNCTIONS #############################################
@@ -1235,14 +1252,36 @@ void retrieve_mag()
 
 void read_voltage( void )
 {
+#define BATT_COUNT 9
 	static uint8_t s=0;
 	uint16_t ui16Volt=0;
+	uint16_t buffer[BATT_COUNT];
+	uint8_t i;
+	bool sorted = false;
 
-	for( uint8_t i=0; i<8; i++ )
+
+	for (i = 0; i < BATT_COUNT; i++)
 	{
-		ui16Volt += analogRead(ADC_VOLTAGE);
+	    buffer[i] = analogRead( ADC_VOLTAGE );
+	    delay(1);
 	}
-	ui16Volt >>= 3;
+
+	while( !sorted )	// median with primitive sort
+	{
+		sorted = true;
+		for (i = 0; i < BATT_COUNT-1; i++)
+		{
+			if( buffer[i] > buffer[i+1] )
+			{
+				ui16Volt = buffer[i+1];
+				buffer[i+1] = buffer[i];
+				buffer[i] = ui16Volt;
+				sorted = false;
+			}
+		}
+	}
+	ui16Volt = buffer[BATT_COUNT>>1];
+
 	voltage_actual = (float)(ui16Volt);
 	voltage_actual = voltage_actual / 1024.0 * VOLTAGE_REF * voltage_ratio;
 
@@ -1254,7 +1293,7 @@ void read_voltage( void )
     if (voltage_actual <= ( s * MIN_VOLTAGE2) )
     	Buzzer.vsetStatus( BUZZER_ALARM );
     else if (voltage_actual <= ( s * MIN_VOLTAGE1  ))
-         Buzzer.vsetStatus( BUZZER_WARN );
+        Buzzer.vsetStatus( BUZZER_WARN );
     else
     	Buzzer.vsetStatus( BUZZER_IDLE );
 }

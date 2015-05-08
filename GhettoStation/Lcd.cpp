@@ -113,16 +113,24 @@ void vShowGpsData( void )
 	char bufferl[10];
     char bufferL[10];
 
-	if (gps_fix)
+	if (gps_fix && telemetry_ok)
 	{
-		sprintf(currentline, "3D FIX! Alt:%dm",(int16_t)round(uav_alt/100.0f));  
+		sprintf(currentline, "Sat:%dm Alt:%dm Spd:%dm",uav_satellites_visible, (int16_t)round(uav_alt/100.0f), uav_groundspeed);
 		tft.println(currentline);			
         sprintf(currentline,"N%s E%s", dtostrf(uav_lat/10000000.0, 5, 5, bufferl),dtostrf(uav_lon/10000000.0, 5, 5, bufferL));
 		tft.println(currentline);	
 	}
 	else
 	{
-		tft.println("NO GPS 3D FIX");
+		if (telemetry_ok)
+		{
+			tft.println("NO GPS 3D FIX");
+		}
+		else
+		{
+			sprintf(currentline,"P:%s NO TELEMETRY", protocol);
+			tft.println(currentline);
+		}
 	}
 }
 
@@ -141,7 +149,7 @@ void vShowRssi( void )
   tft.println( ui16Val );
 }
 
-void vShowSpectrum( void )
+void vShowSpectrum( uint8_t ui8mode )
 {
 	uint8_t y;
 	uint16_t color;
@@ -149,34 +157,54 @@ void vShowSpectrum( void )
 	uint16_t *data;
 	uint8_t ui8Rx = RX5808.ui8GetReceiver();
 
-
+	if( 0==ui8mode )
+	{
+		ui8ScanChannel = configuration.channel;
+	}
 	RX5808.vSelectChannel( ui8ScanChannel );
 	delay(150);
 	RX5808.ui16GetRssi( ui8Rx );
 	data = RX5808.pui16GetAllRSSI();
 
+#ifdef RX5808_DEBUG
+		DEBUG_SERIAL.println( RX5808.ui16GetMinRssi() );
+		DEBUG_SERIAL.println( RX5808.ui16GetMaxRssi() );
+#endif
+
 	tft.fillRect( 0, 64, 160, 64, ST7735_BLACK );
 	for( uint8_t i=1U; i<33U; i++ )
 	{
-		if( i==configuration.channel+1 )
+		if( i==(configuration.channel+1) )
 			color = ST7735_RED;
-		else if( i==ui8ScanChannel+1 )
+		else if( i==(ui8ScanChannel+1) )
 			color = ST7735_YELLOW;
 		else
 			color = ST7735_GREEN;
 		y = (uint8_t) map( *data, RX5808.ui16GetMinRssi(), RX5808.ui16GetMaxRssi(), 0, 50 );
+#ifdef RX5808_DEBUG
+		DEBUG_SERIAL.print( *data );
+		DEBUG_SERIAL.print( "/" );
+		DEBUG_SERIAL.print( y );
+		DEBUG_SERIAL.print( " " );
+#endif
 		if( y > 51 ) y = 51;
 		tft.fillRect( i<<2, 115-y, 4, y, color );
 		data++;
 	}
+#ifdef RX5808_DEBUG
+		DEBUG_SERIAL.println( " " );
+#endif
+
 	tft.setTextColor( ST7735_RED );
 	tft.setTextSize(2);
 	tft.setCursor( 134, 70 );
 	tft.print(ui8Rx);
 	tft.setCursor( 134, 86 );
 	tft.print(configuration.channel+1);
+	tft.setCursor( 134, 102 );
+	tft.print( configuration.diversity ? "D" : "M");
 	ui8ScanChannel = (ui8ScanChannel+1) & 0x1f;
-	vShowSoftkeys( "PREV","EXIT","NEXT" );
+	vShowSoftkeys( "NEXT",( ui8mode==0 )?"SCAN":"MANUAL","PREV" );
 }
 
 void vShowPosition( int16_t i16Bearing, int16_t i16Dist, int16_t i16HBering )
@@ -250,7 +278,8 @@ void vShowMessage( char *text, uint8_t size, uint16_t time  )
 
 void showMenu( void )
 {
-  if( !bMenuUpdate ) return;
+  static uint32_t last = millis();
+  if( !bMenuUpdate && (millis()-last < 2000 ) ) return;
   // Display the menu
   Menu const* cp_menu = displaymenu.get_current_menu();
 
@@ -282,8 +311,9 @@ void showMenu( void )
   vShowBattery();
   vShowRssi();
   
-  vShowSoftkeys( "DOWN","SEL/EXIT","UP" );
+  vShowSoftkeys( "DOWN","SEL","UP" );
   bMenuUpdate = false;
+  last = millis();
   //tft.drawFastHLine(0,63,160,WHITE); // check the limit
 }
 
@@ -328,8 +358,8 @@ void vUpdateData( void )
 void lcddisp_sethome( void ) 
 {
 	vPrepareDataSection();
-	vShowGpsStatus();
 	vShowGpsData();
+	vShowBattery();
 	if (!gps_fix)
 	{
 		tft.println("WAITING FOR GPS DATA");
@@ -432,14 +462,16 @@ void lcddisp_tracking( uint8_t ui8Mode )
 	if( 0 == ui8Mode )
 	{
 		char currentline[21];
+		uint8_t ui8Rx = RX5808.ui8GetReceiver();
+		uint8_t ui8Ch = RX5808.ui8GetChannel();
 		vPrepareDataSection();
-		vShowGpsStatus();
-		sprintf(currentline, "Alt:%dm Spd:%d", (int)round(rel_alt/100.0f), uav_groundspeed);
-		tft.println(currentline);
 		sprintf(currentline, "Dist:%dm Hdg:%d", (int)round(home_dist/100.0f), uav_heading);
 		tft.println(currentline);
 		vShowGpsData();
-		vShowSoftkeys( "-","EXIT/MODE","+" );
+		sprintf(currentline, "Ch:%dm Rx:%d (%dm)", ui8Ch, ui8Rx, RX5808.ui16GetRssi( ui8Rx ) );
+		tft.println( currentline );
+		vShowBattery();
+		vShowSoftkeys( "-","MODE","+" );
 	}
 	else
 	{

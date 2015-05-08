@@ -5,6 +5,7 @@
 #include "defines.h"
 #include "boards.h"
 #include "globals.h"
+#include "HottBtUsb.h"
 
 
 #ifdef PROTOCOL_HOTT
@@ -12,7 +13,6 @@
 /* Configuration */
 #define HOTT_WAIT_TIME 800U		// time to wait for response
 #define HOTT_DELAY_TIME 1000U	// time to wait between requests
-#define HOTT_DEBUG				// debug option
 
 /* local defines */
 #define HOTT_REQUEST_GPS	1

@@ -8,6 +8,7 @@
 #ifndef RX5808_H_
 #define RX5808_H_
 
+//#define RX5808_DEBUG
 #define CHANNELCOUNT 32
 class cRX5808
 {
@@ -15,8 +16,9 @@ private:
 	uint8_t ui8ActiveChannel;
 	uint8_t ui8ActiveReceiver;
 	uint8_t ui8ActiveDiversity;
+	uint8_t ui8RssiMode; // 0 normal receiving, 1 find min/max
 	uint16_t ui16MaxRssi, ui16MinRssi;
-	uint16_t aui8Rssi[CHANNELCOUNT];
+	uint16_t aui16Rssi[CHANNELCOUNT];
 
 	void vSendBit0( void );
 	void vSendBit1( void );
@@ -35,10 +37,9 @@ public:
 	uint8_t ui8GetReceiver( void ){ return ui8ActiveReceiver; }
 	uint8_t ui8GetDiversity( void ){ return ui8ActiveDiversity; }
 	uint8_t ui8ScanChannels( uint8_t ui8Set );
-	void vCalibrateRssi( void );
-	uint16_t *pui16GetAllRSSI( void ){ return aui8Rssi; }
+	void vCalibrateRssi( uint8_t ui8Mode );
+	uint16_t *pui16GetAllRSSI( void ){ return aui16Rssi; }
 	void vDiversity( void );
-
 };
 
 

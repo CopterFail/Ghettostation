@@ -12,7 +12,7 @@
 #include "boards.h"
 #include "rx5808.h"
 
-#define DIVERSITY_HYSTERESIS	30	// 0.1V
+#define DIVERSITY_HYSTERESIS	15	// 30 = 0.1V
 
 // Channels to sent to the SPI registers
 const uint16_t channelTable[] {
@@ -50,11 +50,11 @@ cRX5808::cRX5808()
 	ui8ActiveReceiver = 255;	// none
 	ui8ActiveDiversity = 0;		// off
 	ui16MaxRssi = 310; // 1V with 3V3 Referenz: 1 * 1024 / 3,3 = 310
-	ui16MinRssi = 16; // 0.5V
+	ui16MinRssi = 160; // 0.5V ???
 
 	for (ui8Channel = 0; ui8Channel < CHANNELCOUNT; ui8Channel++)
 	{
-		aui8Rssi[ui8Channel] = ui16MinRssi;
+		aui16Rssi[ui8Channel] = ui16MinRssi;
 	}
 
 	vSelectReceiver(0);
@@ -167,18 +167,42 @@ void cRX5808::vSelectDiversity( uint8_t ui8Diversity )
 }
 uint16_t cRX5808::ui16GetRssi( uint8_t ui8Receiver )
 {
+#define RSSI_COUNT 9
 	uint16_t rssi = 0;
+	uint16_t buffer[RSSI_COUNT];
+	uint8_t i;
+	bool sorted = false;
+
 	if(ui8Receiver == 255) ui8Receiver = ui8ActiveReceiver;
 	
-	for (uint8_t i = 0; i < 10; i++)
+	for (i = 0; i < RSSI_COUNT; i++)
 	{
-	    rssi += analogRead( ui8Receiver ? ADC_RSSI_B : ADC_RSSI_A );
+	    buffer[i] = analogRead( ui8Receiver ? ADC_RSSI_B : ADC_RSSI_A );
+	    delay(1);
 	}
-	rssi = rssi/10;
-	//if( rssi > ui16MaxRssi ) ui16MaxRssi = rssi;
-	//else if( rssi < ui16MinRssi ) ui16MinRssi = rssi;
-	aui8Rssi[ui8ActiveChannel & 0x1f] = rssi;
-	//rssi = map( rssi, ui16MinRssi, ui16MaxRssi, 0, 100);
+
+	while( !sorted )	// median with primitive sort
+	{
+		sorted = true;
+		for (i = 0; i < RSSI_COUNT-1; i++)
+		{
+			if( buffer[i] > buffer[i+1] )
+			{
+				rssi = buffer[i+1];
+				buffer[i+1] = buffer[i];
+				buffer[i] = rssi;
+				sorted = false;
+			}
+		}
+	}
+	rssi = buffer[RSSI_COUNT>>1];
+
+	if( ui8RssiMode == 1 )
+	{
+		if( rssi > ui16MaxRssi ) ui16MaxRssi = rssi;
+		else if( rssi < ui16MinRssi ) ui16MinRssi = rssi;
+	}
+	aui16Rssi[ui8ActiveChannel & 0x1f] = rssi;
 	return rssi;
 }
 
@@ -192,7 +216,7 @@ uint8_t cRX5808::ui8ScanChannels( uint8_t ui8Set )
 		vSelectChannel( ui8Channel );
 		delay( 150 );
 		ui8Rssi = ui16GetRssi( ui8ActiveReceiver );
-		aui8Rssi[ui8Channel] = ui8Rssi;
+		aui16Rssi[ui8Channel] = ui8Rssi;
 		if( ui8Rssi >= ui8BestRssi )
 		{
 			ui8BestRssi = ui8Rssi;
@@ -206,13 +230,18 @@ uint8_t cRX5808::ui8ScanChannels( uint8_t ui8Set )
 	return ui8Best;
 }
 
-void cRX5808::vCalibrateRssi( void )
+void cRX5808::vCalibrateRssi( uint8_t ui8Mode )
 {
-	// todo:
-	// clear the values
-	// scan the channels
-	// update lower boundary
-	// save the data
+	if( ui8Mode == 0 )
+	{
+		ui8RssiMode = 0;
+	}
+	else
+	{
+		ui8RssiMode = 1;
+		ui16MaxRssi = 1;
+		ui16MinRssi = 1023;
+	}
 }
 
 void cRX5808::vDiversity( void )
