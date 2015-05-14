@@ -19,8 +19,7 @@
 #define HOTT_WAIT_GPS		2
 #define HOTT_REQUEST_RX		3
 #define HOTT_WAIT_RX		4
-#define HOTT_UPDATE_GHETTO	5
-#define HOTT_IDLE			6
+#define HOTT_IDLE			10
 
 /* local functions */
 static void vHottFormatGpsString( char *buffer, uint16_t high, uint16_t low );
@@ -30,11 +29,15 @@ static void vHottSendGpsRequest( void );
 static bool bHottReadGpsResponse( void );
 static void vHottSendReceiverRequest( void );
 static bool bHottReadReceiverResponse( void );
-static bool vHottClean( void );
+static void vHottClean( void );
 static void vUpdateGlobalData( void );
 static bool bIsBtConnected( void );
 
 /* local data */
+static uint16_t ui16GpsOk = 0;
+static uint16_t ui16GpsFail = 0;
+static uint16_t ui16RxOk = 0;
+static uint16_t ui16RxFail = 0;
 
 /* local structures */
 struct  __attribute__((__packed__)) {
@@ -134,13 +137,7 @@ void vHottTelemetrie( void )
 	static uint8_t ui8State = HOTT_IDLE;
 	static uint8_t ui8GpsCnt = 4;
 	static uint32_t ui32RequestTime = millis();
-	static bool bUpdate=false;
 	uint32_t ui32Timeout = millis() - ui32RequestTime;
-
-#ifdef HOTT_DEBUG
- 	//DEBUG_SERIAL.print(ui8State);
-	//DEBUG_SERIAL.print(" ");
-#endif
 
 	switch( ui8State )
 	{
@@ -155,23 +152,29 @@ void vHottTelemetrie( void )
 		case HOTT_WAIT_GPS:
 			if( TELEMETRY_SERIAL.available() >= sizeof(GPSData) )
 			{
-				if( bHottReadGpsResponse() ) bUpdate = true;
-				ui8State = HOTT_REQUEST_RX;
+				if( bHottReadGpsResponse() )
+				{
+					ui16GpsOk++;
+					vUpdateGlobalData();
+				}
 			}
 			else if( ui32Timeout > HOTT_WAIT_TIME )
 			{
+				ui16GpsFail++;
 #ifdef HOTT_DEBUG
 				DEBUG_SERIAL.println("HOTT_GPS_TIMEOUT");
 #endif
-				if( ui8GpsCnt > 0)
-				{
-					ui8GpsCnt--;
-					ui8State = HOTT_REQUEST_GPS;
-				}
-				else
-				{
-					ui8State = HOTT_REQUEST_RX;
-				}
+			}
+
+			if( ui8GpsCnt > 0)
+			{
+				ui8GpsCnt--;
+				ui8State = HOTT_REQUEST_GPS;
+			}
+			else
+			{
+				ui8GpsCnt = 4;
+				ui8State = HOTT_REQUEST_RX;
 			}
 		    break;
 		case HOTT_REQUEST_RX:
@@ -185,29 +188,21 @@ void vHottTelemetrie( void )
 		case HOTT_WAIT_RX:
 			if( TELEMETRY_SERIAL.available() >= sizeof(ReceiverData) )
 			{
-				if(bHottReadReceiverResponse()) bUpdate = true;
-				ui8State = HOTT_UPDATE_GHETTO;
+				if(bHottReadReceiverResponse())
+				{
+					ui16RxOk++;
+					vUpdateGlobalData();
+				}
 			}
 			else if( ui32Timeout > HOTT_WAIT_TIME )
 			{
+				ui16RxFail++;
 #ifdef HOTT_DEBUG
 				DEBUG_SERIAL.println("HOTT_RX_TIMEOUT");
 #endif
-				ui8State = HOTT_UPDATE_GHETTO; //HOTT_REQUEST_RX;
-				ui8GpsCnt = 4;
 			}
-		    break;
-		case HOTT_UPDATE_GHETTO:
-			if( bUpdate )
-			{
-				vUpdateGlobalData();
-#ifdef HOTT_DEBUG
-				DEBUG_SERIAL.println("HOTT_UPDATE_DATA");
-#endif
-			}
-			bUpdate = false;
 			ui8State = HOTT_IDLE;
-			break;
+		    break;
 		case HOTT_IDLE:
 		default:
 			if( bIsBtConnected() )
@@ -266,7 +261,7 @@ static bool bHottReadReceiverResponse( void )
 	return ( ui8Cnt == sizeof(ReceiverData) );
 }
 
-static bool vHottClean( void )
+static void vHottClean( void )
 {
 	while( TELEMETRY_SERIAL.available() > 0 ) TELEMETRY_SERIAL.read();
 }
@@ -309,6 +304,21 @@ static void vUpdateGlobalData( void )
 	lastpacketreceived = millis();
 
 #ifdef HOTT_DEBUG
+	static uint32_t ui32FirstPacketTime = millis();
+	DEBUG_SERIAL.print("HoTT active for ");
+	DEBUG_SERIAL.print(lastpacketreceived-ui32FirstPacketTime);
+	DEBUG_SERIAL.println(" ms.");
+	DEBUG_SERIAL.print("GPS (OK/FAIL): ");
+	DEBUG_SERIAL.print(ui16GpsOk);
+	DEBUG_SERIAL.print(" / ");
+	DEBUG_SERIAL.println(ui16GpsFail);
+	DEBUG_SERIAL.print("Rx (OK/FAIL): ");
+	DEBUG_SERIAL.print(ui16RxOk);
+	DEBUG_SERIAL.print(" / ");
+	DEBUG_SERIAL.println(ui16RxFail);
+#endif
+
+#ifdef HOTT_SIMULATION_DEBUG
 	static float w=0;
 	uav_satellites_visible = 6;
 	uav_fix_type = 3;
