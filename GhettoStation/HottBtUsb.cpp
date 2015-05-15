@@ -11,8 +11,7 @@
 #ifdef PROTOCOL_HOTT
 
 /* Configuration */
-#define HOTT_WAIT_TIME 800U		// time to wait for response
-#define HOTT_DELAY_TIME 1000U	// time to wait between requests
+#define HOTT_WAIT_TIME 100U		// time [ms] to wait for response or next request
 
 /* local defines */
 #define HOTT_REQUEST_GPS	1
@@ -135,9 +134,23 @@ void vHottInit( void )
 void vHottTelemetrie( void )
 {
 	static uint8_t ui8State = HOTT_IDLE;
-	static uint8_t ui8GpsCnt = 4;
-	static uint32_t ui32RequestTime = millis();
-	uint32_t ui32Timeout = millis() - ui32RequestTime;
+	static uint8_t ui8GpsCnt = 0;
+	static uint32_t ui32RequestTime = 0;
+	static uint8_t lastState = 0;
+
+	uint32_t ui32Timeout;
+
+	ui32Timeout = millis() - ui32RequestTime;
+
+#ifdef HOTT_DEBUG
+
+	if( lastState != ui8State )
+	{
+		DEBUG_SERIAL.println(ui8State);
+		lastState = ui8State;
+	}
+
+#endif
 
 	switch( ui8State )
 	{
@@ -156,16 +169,23 @@ void vHottTelemetrie( void )
 				{
 					ui16GpsOk++;
 					vUpdateGlobalData();
+					ui8State = HOTT_REQUEST_RX;
+				}
+				else
+				{
+					ui16GpsFail++;
+					ui8State = HOTT_REQUEST_RX;
 				}
 			}
 			else if( ui32Timeout > HOTT_WAIT_TIME )
 			{
 				ui16GpsFail++;
+				ui8State = HOTT_REQUEST_RX;
 #ifdef HOTT_DEBUG
 				DEBUG_SERIAL.println("HOTT_GPS_TIMEOUT");
 #endif
 			}
-
+/*
 			if( ui8GpsCnt > 0)
 			{
 				ui8GpsCnt--;
@@ -173,9 +193,10 @@ void vHottTelemetrie( void )
 			}
 			else
 			{
-				ui8GpsCnt = 4;
+				ui8GpsCnt = 0;
 				ui8State = HOTT_REQUEST_RX;
 			}
+*/
 		    break;
 		case HOTT_REQUEST_RX:
 			if( ui32Timeout > HOTT_WAIT_TIME )
@@ -192,22 +213,36 @@ void vHottTelemetrie( void )
 				{
 					ui16RxOk++;
 					vUpdateGlobalData();
+					ui8State = HOTT_IDLE;
+				}
+				else
+				{
+					ui16RxFail++;
+					ui8State = HOTT_IDLE;
 				}
 			}
 			else if( ui32Timeout > HOTT_WAIT_TIME )
 			{
 				ui16RxFail++;
+				ui8State = HOTT_IDLE;
 #ifdef HOTT_DEBUG
 				DEBUG_SERIAL.println("HOTT_RX_TIMEOUT");
 #endif
 			}
-			ui8State = HOTT_IDLE;
+
 		    break;
 		case HOTT_IDLE:
 		default:
 			if( bIsBtConnected() )
 			{	
 				ui8State = HOTT_REQUEST_GPS;
+			}
+			else
+			{
+#ifdef HOTT_DEBUG
+				DEBUG_SERIAL.println("HOTT no BT");
+#endif
+
 			}
 			break;
 	}
