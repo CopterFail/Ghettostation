@@ -16,8 +16,10 @@
 /* local defines */
 #define HOTT_REQUEST_GPS	1
 #define HOTT_WAIT_GPS		2
-#define HOTT_REQUEST_RX		3
-#define HOTT_WAIT_RX		4
+#define HOTT_REQUEST_EAM	3
+#define HOTT_WAIT_EAM		4
+#define HOTT_REQUEST_RX		5
+#define HOTT_WAIT_RX		6
 #define HOTT_IDLE			10
 
 /* local functions */
@@ -26,6 +28,8 @@ static float fHottGetGpsDegree( uint16_t high, uint16_t low );
 static uint32_t ui32HottGetGpsDegree( uint16_t high, uint16_t low );
 static void vHottSendGpsRequest( void );
 static bool bHottReadGpsResponse( void );
+static void vHottSendEamRequest( void );
+static bool bHottReadEamResponse( void );
 static void vHottSendReceiverRequest( void );
 static bool bHottReadReceiverResponse( void );
 static void vHottClean( void );
@@ -35,6 +39,8 @@ static bool bIsBtConnected( void );
 /* local data */
 static uint16_t ui16GpsOk = 0;
 static uint16_t ui16GpsFail = 0;
+static uint16_t ui16EamOk = 0;
+static uint16_t ui16EamFail = 0;
 static uint16_t ui16RxOk = 0;
 static uint16_t ui16RxFail = 0;
 
@@ -99,6 +105,49 @@ struct  __attribute__((__packed__)) {
   uint8_t  ui8LowVolt;
   uint16_t ui16DummyD;
 } ReceiverData;
+
+struct  __attribute__((__packed__)) {
+	  // Telegram Header:
+	  uint8_t  ui8Start; // 0x00
+	  uint16_t ui16Dummy;
+	  uint8_t  ui8Header1; // 0x30
+	  uint8_t  ui8Header2; // 0x00
+	  uint8_t  ui8Header3; // 0x04
+	  uint8_t  ui8Header4; // 0x01
+	  // EAM Data:
+	  uint16_t ui16DummyH;
+	  uint16_t ui16CellV1;
+	  uint16_t ui16CellV2;
+	  uint16_t ui16CellV3;
+	  uint16_t ui16CellV4;
+	  uint16_t ui16CellV5;
+	  uint16_t ui16CellV6;
+	  uint16_t ui16CellV7;
+	  uint16_t ui16CellV8;
+	  uint16_t ui16CellV9;
+	  uint16_t ui16CellV10;
+	  uint16_t ui16CellV11;
+	  uint16_t ui16CellV12;
+	  uint16_t ui16CellV13;
+	  uint16_t ui16CellV14;
+	  uint16_t ui16Batt1;
+	  uint16_t ui16Batt2;
+	  uint16_t ui16Temp1;
+	  uint16_t ui16Temp2;
+	  uint16_t ui16Alt;
+	  uint16_t ui16PowerCurrent;
+	  uint16_t ui16PowerVolt;
+	  uint16_t ui16PowerCapacity;
+	  uint16_t ui16Alt1s;
+	  uint8_t  ui8Alt3s;
+	  uint8_t  ui8DBM;
+	  uint16_t ui16RPM;
+	  uint8_t  ui8Min;
+	  uint8_t  ui8Sec;
+	  uint8_t  ui8Speed;
+	  uint8_t  ui8Version;
+	  uint16_t ui16DummyD;
+} EamData;
 
 static float fHottGetGpsDegree( uint16_t high, uint16_t low )
 {
@@ -198,6 +247,39 @@ void vHottTelemetrie( void )
 			}
 */
 		    break;
+		case HOTT_REQUEST_EAM:
+			if( ui32Timeout > HOTT_WAIT_TIME )
+			{
+				ui32RequestTime = millis();
+				vHottSendEamRequest();
+				ui8State = HOTT_WAIT_RX;
+			}
+			break;
+		case HOTT_WAIT_EAM:
+			if( TELEMETRY_SERIAL.available() >= sizeof(EamData) )
+			{
+				if(bHottReadEamResponse())
+				{
+					ui16EamOk++;
+					vUpdateGlobalData();
+					ui8State = HOTT_REQUEST_RX;
+				}
+				else
+				{
+					ui16EamFail++;
+					ui8State = HOTT_REQUEST_RX;
+				}
+			}
+			else if( ui32Timeout > HOTT_WAIT_TIME )
+			{
+				ui16EamFail++;
+				ui8State = HOTT_REQUEST_RX;
+#ifdef HOTT_DEBUG
+				DEBUG_SERIAL.println("HOTT_EAM_TIMEOUT");
+#endif
+			}
+
+		    break;
 		case HOTT_REQUEST_RX:
 			if( ui32Timeout > HOTT_WAIT_TIME )
 			{
@@ -296,6 +378,30 @@ static bool bHottReadReceiverResponse( void )
 	return ( ui8Cnt == sizeof(ReceiverData) );
 }
 
+static void vHottSendEamRequest( void )
+{
+    vHottClean();
+    TELEMETRY_SERIAL.write( 0x00 );
+    TELEMETRY_SERIAL.write( 0x03 );
+    TELEMETRY_SERIAL.write( 0xfc );
+    TELEMETRY_SERIAL.write( 0x00 );
+    TELEMETRY_SERIAL.write( 0x00 );
+    TELEMETRY_SERIAL.write( 0x04 );
+    TELEMETRY_SERIAL.write( 0x36 );
+    TELEMETRY_SERIAL.write( 0x51 );
+    TELEMETRY_SERIAL.write( 0x9a );
+}
+
+static bool bHottReadEamResponse( void )
+{
+	uint8_t ui8Cnt;
+	ui8Cnt = TELEMETRY_SERIAL.readBytes( (uint8_t *)&EamData, sizeof(EamData) );
+#ifdef HOTT_DEBUG
+	DEBUG_SERIAL.println(ui8Cnt);
+#endif
+	return ( ui8Cnt == sizeof(EamData) );
+}
+
 static void vHottClean( void )
 {
 	while( TELEMETRY_SERIAL.available() > 0 ) TELEMETRY_SERIAL.read();
@@ -319,12 +425,14 @@ static void vUpdateGlobalData( void )
 	uav_alt = (int32_t)GPSData.ui16Altitude * 10;   // altitude (cm)
 	//rel_alt = GPSData.ui16Altitude * 10; 			// relative altitude to home
 	uav_groundspeed = GPSData.ui16Speed;            // ground speed in km/h
-	uav_groundspeedms = GPSData.ui16Speed;          // ground speed in m/s
+	uav_groundspeedms = GPSData.ui16Speed / 3.6f;   // ground speed in m/s
 	uav_pitch = GPSData.ui8AngleX;                  // attitude pitch
 	uav_roll = GPSData.ui8AngleY;                   // attitude roll
 	uav_heading = GPSData.ui8AngleZ;                // attitude heading
 	uav_gpsheading=GPSData.ui16Direction;           // gps heading
-	uav_bat = ReceiverData.ui8Volt*100U;            // battery voltage (mv)
+	//uav_bat = ReceiverData.ui8Volt*100U;            // battery voltage (mv)
+	uav_bat = (EamData.ui16Batt1 > EamData.ui16Batt2) ? EamData.ui16Batt1 : EamData.ui16Batt2;
+	uav_bat *= 100;                                 //??
 	uav_current = 0;                				// actual current
 	uav_rssi = ReceiverData.ui8Strength;			// radio RSSI (%)
 	uav_linkquality = ReceiverData.ui8Quality;		// radio link quality
@@ -347,6 +455,10 @@ static void vUpdateGlobalData( void )
 	DEBUG_SERIAL.print(ui16GpsOk);
 	DEBUG_SERIAL.print(" / ");
 	DEBUG_SERIAL.println(ui16GpsFail);
+	DEBUG_SERIAL.print("EAM (OK/FAIL): ");
+	DEBUG_SERIAL.print(ui16EamOk);
+	DEBUG_SERIAL.print(" / ");
+	DEBUG_SERIAL.println(ui16EamFail);
 	DEBUG_SERIAL.print("Rx (OK/FAIL): ");
 	DEBUG_SERIAL.print(ui16RxOk);
 	DEBUG_SERIAL.print(" / ");
