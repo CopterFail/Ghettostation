@@ -20,15 +20,14 @@
 #define PROTOCOL_HOTT							//HoTT USB / BT protocol
 
 /* If you have communication problem at 56K , set this on. ( ie APM 2/2.5/2.6/AIO )
-   Most Arduino have a +2.18% error at 57600 bd, Teensyduino has a -0.74% error. Booth cumulated are too much.
-   Successfull com between Teensy & arduino requires 58824 bauds for Teensy.*/
+ Most Arduino have a +2.18% error at 57600 bd, Teensyduino has a -0.74% error. Booth cumulated are too much.
+ Successfull com between Teensy & arduino requires 58824 bauds for Teensy.*/
 //#define BAUDRATE56K 57600
 #define BAUDRATE56K 58824
 
 //########### LCD ##################################################################################################
 //LCD model
 #define LCDST7735	// 128 x 180 pixel SPI LCD
-
 
 #define CONFIG_VERSION 1004 // Changing this will reset eeprom to default values
 
@@ -37,10 +36,7 @@
 //#define MEGA // Arduino Mega board
 #define TEENSY31
 
-
-
 //#define COMPASS                                 //Keep it enabled even if unused, but you will need i2c
-
 
 #define BARO_ALT // Use Baro for Altitude. Comment for using GPS altitude instead.
 
@@ -48,7 +44,7 @@
 #define MAGHEADING 1
 
 #define MAGDEC -600  // Your local Magnetic Declination in radian. Get it from here: http://magnetic-declination.com/  then convert it in milliradian: http://www.wolframalpha.com/input/?i=%280%C2%B0+5%27%29+in+radians
-                     // only needed if using internal compass.
+// only needed if using internal compass.
 
 //Minimum distance in meters where it will stop moving servos.
 #define DONTTRACKUNDER  5
@@ -78,7 +74,6 @@
 //########### GROUND OSD TELEMETRY OUTPUT #########################################################################
 #define OSD_OUTPUT			// Activate osd output (comment if not needed)
 #define OSD_BAUD 57600		//OSD output baudrate
-
 
 //#################################### SERVOS ENDPOINTS #############################################################
 // NO NEED TO EDIT THIS

@@ -1,231 +1,241 @@
-
 #include <Arduino.h>
 
 #include "defines.h"
 #include "boards.h"
 #include "globals.h"
 
-
 #if defined(PROTOCOL_MSP)
 #include "MSP.h"
 
 #define MWCSERIALBUFFERSIZE 256
-  static uint8_t MSPserialBuffer[MWCSERIALBUFFERSIZE];
-  static uint8_t MSPreadIndex;
-  static uint8_t MSPreceiverIndex;
-  static uint8_t MSPdataSize;
-  static uint8_t MSPcmd;
-  static uint8_t MSPrcvChecksum;
+static uint8_t MSPserialBuffer[MWCSERIALBUFFERSIZE];
+static uint8_t MSPreadIndex;
+static uint8_t MSPreceiverIndex;
+static uint8_t MSPdataSize;
+static uint8_t MSPcmd;
+static uint8_t MSPrcvChecksum;
 
-  static uint32_t modeMSPRequests;
-  
-  
-uint8_t read8()  {
-  return MSPserialBuffer[MSPreadIndex++];
+static uint32_t modeMSPRequests;
+
+uint8_t read8()
+{
+	return MSPserialBuffer[MSPreadIndex++];
 }
 
-uint16_t read16() {
-  uint16_t t = read8();
-  t |= (uint16_t)read8()<<8;
-  return t;
+uint16_t read16()
+{
+	uint16_t t = read8();
+	t |= (uint16_t) read8() << 8;
+	return t;
 }
 
-uint32_t read32() {
-  uint32_t t = read16();
-  t |= (uint32_t)read16()<<16;
-  return t;
+uint32_t read32()
+{
+	uint32_t t = read16();
+	t |= (uint32_t) read16() << 16;
+	return t;
 }
 
-void msp_read2() { // moved from ghettostation.ino..
-    static unsigned long previous_millis_low = 0;
-    static unsigned long previous_millis_high = 0;
-    static unsigned long previous_millis_onsec = 0;
-    static uint8_t queuedMSPRequests = 0;
-    unsigned long currentMillis = millis();
-    if((currentMillis - previous_millis_low) >= 1000) // 1hz
-    {
-        setMspRequests();
-    }
-    if((currentMillis - previous_millis_low) >= 100)  // 10 Hz (Executed every 100ms)
-    {
-        blankserialRequest(MSP_ATTITUDE);
-        previous_millis_low = millis();
-    }
-    if((currentMillis - previous_millis_high) >= 200) // 20 Hz (Executed every 50ms)
-    {
-        uint8_t MSPcmdsend;
-        if(queuedMSPRequests == 0)
-            queuedMSPRequests = modeMSPRequests;
-        uint32_t req = queuedMSPRequests & -queuedMSPRequests;
-        queuedMSPRequests &= ~req;
-        switch(req) {
-            case REQ_MSP_IDENT:
-              MSPcmdsend = MSP_IDENT;
-              break;
-            case REQ_MSP_STATUS:
-              MSPcmdsend = MSP_STATUS;
-              break;
-            case REQ_MSP_RAW_GPS:
-              MSPcmdsend = MSP_RAW_GPS;
-              break;
-            case REQ_MSP_ALTITUDE:
-              MSPcmdsend = MSP_ALTITUDE;
-              break;
-            case REQ_MSP_ANALOG:
-              MSPcmdsend = MSP_ANALOG;
-              break;
-        }
-    previous_millis_high = millis();
-    }
+void msp_read2()
+{ // moved from ghettostation.ino..
+	static unsigned long previous_millis_low = 0;
+	static unsigned long previous_millis_high = 0;
+	static unsigned long previous_millis_onsec = 0;
+	static uint8_t queuedMSPRequests = 0;
+	unsigned long currentMillis = millis();
+	if ((currentMillis - previous_millis_low) >= 1000) // 1hz
+	{
+		setMspRequests();
+	}
+	if ((currentMillis - previous_millis_low) >= 100) // 10 Hz (Executed every 100ms)
+	{
+		blankserialRequest(MSP_ATTITUDE);
+		previous_millis_low = millis();
+	}
+	if ((currentMillis - previous_millis_high) >= 200) // 20 Hz (Executed every 50ms)
+	{
+		uint8_t MSPcmdsend;
+		if (queuedMSPRequests == 0)
+			queuedMSPRequests = modeMSPRequests;
+		uint32_t req = queuedMSPRequests & -queuedMSPRequests;
+		queuedMSPRequests &= ~req;
+		switch (req)
+		{
+		case REQ_MSP_IDENT:
+			MSPcmdsend = MSP_IDENT;
+			break;
+		case REQ_MSP_STATUS:
+			MSPcmdsend = MSP_STATUS;
+			break;
+		case REQ_MSP_RAW_GPS:
+			MSPcmdsend = MSP_RAW_GPS;
+			break;
+		case REQ_MSP_ALTITUDE:
+			MSPcmdsend = MSP_ALTITUDE;
+			break;
+		case REQ_MSP_ANALOG:
+			MSPcmdsend = MSP_ANALOG;
+			break;
+		}
+		previous_millis_high = millis();
+	}
 
 }
 
-void msp_read() {
+void msp_read()
+{
 
+	uint8_t c;
 
-  uint8_t c;
+	static enum _serial_state
+	{
+		IDLE, HEADER_START, HEADER_M, HEADER_ARROW, HEADER_SIZE, HEADER_CMD
+	} c_state = IDLE;
 
-  static enum _serial_state {
-    IDLE,
-    HEADER_START,
-    HEADER_M,
-    HEADER_ARROW,
-    HEADER_SIZE,
-    HEADER_CMD
-  }
-  c_state = IDLE;
+	while (TELEMETRY_SERIAL.available())
+	{
+		c = TELEMETRY_SERIAL.read();
 
-  while (TELEMETRY_SERIAL.available()) {
-    c = TELEMETRY_SERIAL.read();
-
-    if (c_state == IDLE) {
-      c_state = (c=='$') ? HEADER_START : IDLE;
-    }
-    else if (c_state == HEADER_START) {
-      c_state = (c=='M') ? HEADER_M : IDLE;
-    }
-    else if (c_state == HEADER_M) {
-      c_state = (c=='>') ? HEADER_ARROW : IDLE;
-    }
-    else if (c_state == HEADER_ARROW) {
-      if (c > MWCSERIALBUFFERSIZE)  {  // now we are expecting the payload size
-        c_state = IDLE;
-      }
-      else {
-        MSPdataSize = c;
-        c_state = HEADER_SIZE;
-        MSPrcvChecksum = c;
-      }
-    }
-    else if (c_state == HEADER_SIZE) {
-      c_state = HEADER_CMD;
-      MSPcmd = c;
-      MSPrcvChecksum ^= c;
-      MSPreceiverIndex=0;
-    }
-    else if (c_state == HEADER_CMD) {
-      MSPrcvChecksum ^= c;
-      if(MSPreceiverIndex == MSPdataSize) { // received checksum byte
-        if(MSPrcvChecksum == 0) {
-            telemetry_ok = true;
-            lastpacketreceived = millis();
-            protocol = "MSP"; 
-            msp_check();
-        }
-        c_state = IDLE;
-      }
-      else MSPserialBuffer[MSPreceiverIndex++]=c;
-    }
-  }
+		if (c_state == IDLE)
+		{
+			c_state = (c == '$') ? HEADER_START : IDLE;
+		}
+		else if (c_state == HEADER_START)
+		{
+			c_state = (c == 'M') ? HEADER_M : IDLE;
+		}
+		else if (c_state == HEADER_M)
+		{
+			c_state = (c == '>') ? HEADER_ARROW : IDLE;
+		}
+		else if (c_state == HEADER_ARROW)
+		{
+			if (c > MWCSERIALBUFFERSIZE)
+			{  // now we are expecting the payload size
+				c_state = IDLE;
+			}
+			else
+			{
+				MSPdataSize = c;
+				c_state = HEADER_SIZE;
+				MSPrcvChecksum = c;
+			}
+		}
+		else if (c_state == HEADER_SIZE)
+		{
+			c_state = HEADER_CMD;
+			MSPcmd = c;
+			MSPrcvChecksum ^= c;
+			MSPreceiverIndex = 0;
+		}
+		else if (c_state == HEADER_CMD)
+		{
+			MSPrcvChecksum ^= c;
+			if (MSPreceiverIndex == MSPdataSize)
+			{ // received checksum byte
+				if (MSPrcvChecksum == 0)
+				{
+					telemetry_ok = true;
+					lastpacketreceived = millis();
+					protocol = "MSP";
+					msp_check();
+				}
+				c_state = IDLE;
+			}
+			else
+				MSPserialBuffer[MSPreceiverIndex++] = c;
+		}
+	}
 }
 
 // --------------------------------------------------------------------------------------
 // Here are decoded received commands from MultiWii
-void msp_check() {
-  MSPreadIndex = 0;
-                    
-  if (MSPcmd==MSP_IDENT)
-  {
-    // possible use later
-   // MwVersion= read8();                             // MultiWii Firmware version
-   // modeMSPRequests &=~ REQ_MSP_IDENT;
-  }
+void msp_check()
+{
+	MSPreadIndex = 0;
 
-  if (MSPcmd==MSP_STATUS)
-  {
-  //possible use later
-  }
-  if (MSPcmd==MSP_RAW_GPS)
-  {
-    uav_fix_type=read8();
-    if (uav_fix_type == 1)
-        uav_fix_type = 3;  //multiwii only have to fix status, 0 (no fix) or 1 ( 3D fix )
-    uav_satellites_visible=read8();
-    uav_lat = (int32_t)read32();
-    uav_lon = (int32_t)read32();
-    #ifndef BARO_ALT
-    uav_alt = (int32_t)(read16()*100);
-    #endif
+	if (MSPcmd == MSP_IDENT)
+	{
+		// possible use later
+		// MwVersion= read8();                             // MultiWii Firmware version
+		// modeMSPRequests &=~ REQ_MSP_IDENT;
+	}
 
-    uav_groundspeed = read16();
-  }
+	if (MSPcmd == MSP_STATUS)
+	{
+		//possible use later
+	}
+	if (MSPcmd == MSP_RAW_GPS)
+	{
+		uav_fix_type = read8();
+		if (uav_fix_type == 1)
+			uav_fix_type = 3; //multiwii only have to fix status, 0 (no fix) or 1 ( 3D fix )
+		uav_satellites_visible = read8();
+		uav_lat = (int32_t) read32();
+		uav_lon = (int32_t) read32();
+#ifndef BARO_ALT
+		uav_alt = (int32_t)(read16()*100);
+#endif
 
-  if (MSPcmd==MSP_COMP_GPS)
-  {
+		uav_groundspeed = read16();
+	}
+
+	if (MSPcmd == MSP_COMP_GPS)
+	{
 //    GPS_distanceToHome=read16();
 //    GPS_directionToHome=read16();
-  }
+	}
 
-  if (MSPcmd==MSP_ATTITUDE)
-  {
+	if (MSPcmd == MSP_ATTITUDE)
+	{
 //  possible use later
 //    for(uint8_t i=0;i<2;i++)
 //      MwAngle[i] = read16();
 //    MwHeading = read16();
 //    read16();
-  }
+	}
 
-  if (MSPcmd==MSP_ALTITUDE)
-  {
-    #ifdef BARO_ALT
-    uav_alt = (int32_t)read32()  ;
-    #endif
-    //uav_vario = read16();
-  }
+	if (MSPcmd == MSP_ALTITUDE)
+	{
+#ifdef BARO_ALT
+		uav_alt = (int32_t) read32();
+#endif
+		//uav_vario = read16();
+	}
 
-  if (MSPcmd==MSP_ANALOG)
-  {
+	if (MSPcmd == MSP_ANALOG)
+	{
 // for later
 //    MwVBat=read8();
 //    pMeterSum=read16();
 //    MwRssi = read16();
 //    uav_rssi = map(MwRssi,minrssi,maxrssi,0,100) // remap in %
-  }
+	}
 }
-
 
 // End of decoded received commands from MultiWii
 // --------------------------------------------------------------------------------------
 
 // Request data to Multiwii ( unused yet )
-void blankserialRequest(char requestMSP) 
+void blankserialRequest(char requestMSP)
 {
 	TELEMETRY_SERIAL.write('$');
 	TELEMETRY_SERIAL.write('M');
 	TELEMETRY_SERIAL.write('<');
-	TELEMETRY_SERIAL.write((byte)0x00);
+	TELEMETRY_SERIAL.write((byte) 0x00);
 	TELEMETRY_SERIAL.write(requestMSP);
 	TELEMETRY_SERIAL.write(requestMSP);
 }
 
 //########################################### TX OSD OUTPUT###############################################################
-void setMspRequests() {
-    modeMSPRequests = 
-      REQ_MSP_IDENT|
-      REQ_MSP_STATUS|
-      REQ_MSP_RAW_GPS|
-      REQ_MSP_ANALOG|
-      REQ_MSP_ALTITUDE;
+void setMspRequests()
+{
+	modeMSPRequests =
+	REQ_MSP_IDENT |
+	REQ_MSP_STATUS |
+	REQ_MSP_RAW_GPS |
+	REQ_MSP_ANALOG |
+	REQ_MSP_ALTITUDE;
 }
 
 //static uint8_t MSPtxChecksum;
@@ -293,6 +303,5 @@ void setMspRequests() {
 //
 //
 //
-
 
 #endif

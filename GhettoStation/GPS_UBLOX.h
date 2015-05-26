@@ -4,8 +4,8 @@
 #define UBX_MAXPAYLOAD 60
 class GPS_UBLOX_Class
 {
-  private:
-    // Internal variables
+private:
+	// Internal variables
 	uint8_t ck_a;     // Packet checksum
 	uint8_t ck_b;
 	uint8_t UBX_step;
@@ -23,8 +23,8 @@ class GPS_UBLOX_Class
 	void ubx_checksum(unsigned char ubx_data);
 	long join_4_bytes(unsigned char Buffer[]);
 
-  public:
-    // Methods
+public:
+	// Methods
 	GPS_UBLOX_Class();
 	void Init();
 	void Read();
@@ -44,6 +44,6 @@ class GPS_UBLOX_Class
 
 extern GPS_UBLOX_Class GPS_UBLOX;
 
-void gps_ublox_read( void );
+void gps_ublox_read(void);
 
 #endif

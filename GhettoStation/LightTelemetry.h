@@ -1,8 +1,7 @@
 
-
-void ltm_read( void );
-void ltm_write( void );
-void ltm_check( void );
+void ltm_read(void);
+void ltm_write(void);
+void ltm_check(void);
 
 #define LIGHTTELEMETRY_START1 0x24 //$
 #define LIGHTTELEMETRY_START2 0x54 //T
@@ -13,5 +12,5 @@ void ltm_check( void );
 #define LIGHTTELEMETRY_AFRAMELENGTH 10
 #define LIGHTTELEMETRY_SFRAMELENGTH 11
 #define LIGHTTELEMETRY_OFRAMELENGTH 18
-	
+
 void telemetry_off(void);

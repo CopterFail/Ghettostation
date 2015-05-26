@@ -1,6 +1,3 @@
-- battery gs display (adc)
-- video rssi display (adc)
-- buzzer alert
 - manual tilt
 - telemetry display: add screens
 - protocol: FrSky Hub

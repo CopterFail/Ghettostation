@@ -4,20 +4,20 @@
 #define GPS_BUFFERSIZE 120 
 class GPS_NMEA_Class
 {
-  private:
-    // Internal variables
-    uint8_t GPS_checksum;
-    uint8_t GPS_checksum_calc;
+private:
+	// Internal variables
+	uint8_t GPS_checksum;
+	uint8_t GPS_checksum_calc;
 	char buffer[GPS_BUFFERSIZE];
 	int bufferidx;
 
 	void parse_nmea_gps(void);
 	uint8_t parseHex(char c);
-	long parsedecimal(char *str,uint8_t num_car);
-	long parsenumber(char *str,uint8_t numdec);
+	long parsedecimal(char *str, uint8_t num_car);
+	long parsenumber(char *str, uint8_t numdec);
 
-  public:
-    // Methods
+public:
+	// Methods
 	GPS_NMEA_Class();
 	void Init();
 	void Read();
@@ -40,6 +40,6 @@ class GPS_NMEA_Class
 
 extern GPS_NMEA_Class GPS_NMEA;
 
-void gps_nmea_read( void );
+void gps_nmea_read(void);
 
 #endif
