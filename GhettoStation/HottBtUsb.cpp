@@ -150,7 +150,7 @@ struct
 				uint8_t ui8Sec;
 				uint8_t ui8Speed;
 				uint8_t ui8Version;
-				uint16_t ui16DummyD;
+//				uint16_t ui16DummyD;
 			} EamData;
 
 			static float fHottGetGpsDegree(uint16_t high, uint16_t low)
@@ -222,18 +222,18 @@ struct
 						{
 							ui16GpsOk++;
 							vUpdateGlobalData();
-							ui8State = HOTT_REQUEST_RX;
+							ui8State = HOTT_REQUEST_EAM;
 						}
 						else
 						{
 							ui16GpsFail++;
-							ui8State = HOTT_REQUEST_RX;
+							ui8State = HOTT_REQUEST_EAM;
 						}
 					}
 					else if (ui32Timeout > HOTT_WAIT_TIME)
 					{
 						ui16GpsFail++;
-						ui8State = HOTT_REQUEST_RX;
+						ui8State = HOTT_REQUEST_EAM;
 #ifdef HOTT_DEBUG
 						DEBUG_SERIAL.println("HOTT_GPS_TIMEOUT");
 #endif
@@ -256,7 +256,7 @@ struct
 					{
 						ui32RequestTime = millis();
 						vHottSendEamRequest();
-						ui8State = HOTT_WAIT_RX;
+						ui8State = HOTT_WAIT_EAM;
 					}
 					break;
 				case HOTT_WAIT_EAM:
@@ -279,7 +279,10 @@ struct
 						ui16EamFail++;
 						ui8State = HOTT_REQUEST_RX;
 #ifdef HOTT_DEBUG
-						DEBUG_SERIAL.println("HOTT_EAM_TIMEOUT");
+						DEBUG_SERIAL.print("HOTT_EAM_TIMEOUT - ");
+						DEBUG_SERIAL.print(TELEMETRY_SERIAL.available());
+						DEBUG_SERIAL.print(" ");
+						DEBUG_SERIAL.println(sizeof(EamData));
 #endif
 					}
 
@@ -437,7 +440,9 @@ struct
 				uav_groundspeed = GPSData.ui16Speed;     // ground speed in km/h
 				uav_groundspeedms = GPSData.ui16Speed / 3.6f; // ground speed in m/s
 				uav_pitch = GPSData.ui8AngleX;                 // attitude pitch
+				uav_pitch = uav_pitch * 2 - 180;
 				uav_roll = GPSData.ui8AngleY;                   // attitude roll
+				uav_roll = uav_roll * 2 - 180;
 				uav_heading = GPSData.ui8AngleZ;             // attitude heading
 				uav_gpsheading = GPSData.ui16Direction;           // gps heading
 				//uav_bat = ReceiverData.ui8Volt*100U;            // battery voltage (mv)
@@ -479,8 +484,13 @@ struct
 
 #ifdef HOTT_SIMULATION_DEBUG
 				static float w=0;
-				uav_satellites_visible = 6;
-				uav_fix_type = 3;
+				static int16_t k=0;
+				static int8_t d=1;
+				if(w>5){
+					uav_satellites_visible = 6;
+					uav_fix_type = '3';
+				}
+
 				// The home pos:
 				uav_lat = 1e7 * 51.3678;
 				uav_lon = 1e7 * 6.78756;
@@ -492,9 +502,14 @@ struct
 
 					// 0 .. 1000m height depend on pan angle...
 					uav_alt = (int32_t)(50000.0 * ( 1 + sin(w) ) );
-
-					w+=0.1;
 				}
+				w+=0.1;
+
+				uav_pitch = 0;
+				uav_roll = k;
+				k+=d;
+				if( k >= 30 ) d=-1;
+				if( k <= -30 ) d=1;
 #endif
 
 			}
