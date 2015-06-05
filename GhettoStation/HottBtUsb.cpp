@@ -357,7 +357,7 @@ struct
 				ui8Cnt = TELEMETRY_SERIAL.readBytes((uint8_t *) &GPSData,
 						sizeof(GPSData));
 #ifdef HOTT_DEBUG
-				DEBUG_SERIAL.println(ui8Cnt);
+				//DEBUG_SERIAL.println(ui8Cnt);
 #endif
 				return (ui8Cnt == sizeof(GPSData));
 			}
@@ -382,7 +382,7 @@ struct
 				ui8Cnt = TELEMETRY_SERIAL.readBytes((uint8_t *) &ReceiverData,
 						sizeof(ReceiverData));
 #ifdef HOTT_DEBUG
-				DEBUG_SERIAL.println(ui8Cnt);
+				//DEBUG_SERIAL.println(ui8Cnt);
 #endif
 				return (ui8Cnt == sizeof(ReceiverData));
 			}
@@ -407,7 +407,7 @@ struct
 				ui8Cnt = TELEMETRY_SERIAL.readBytes((uint8_t *) &EamData,
 						sizeof(EamData));
 #ifdef HOTT_DEBUG
-				DEBUG_SERIAL.println(ui8Cnt);
+				//DEBUG_SERIAL.println(ui8Cnt);
 #endif
 				return (ui8Cnt == sizeof(EamData));
 			}
@@ -436,13 +436,14 @@ struct
 				uav_satellites_visible = GPSData.ui8Sat;// number of satellites
 				uav_fix_type = GPSData.ui8FixChar;// GPS lock 0-1=no fix, 2=2D, 3=3D
 				uav_alt = (int32_t) GPSData.ui16Altitude * 10;  // altitude (cm)
-				//rel_alt = GPSData.ui16Altitude * 10; 			// relative altitude to home
 				uav_groundspeed = GPSData.ui16Speed;     // ground speed in km/h
 				uav_groundspeedms = GPSData.ui16Speed / 3.6f; // ground speed in m/s
 				uav_pitch = GPSData.ui8AngleX;                 // attitude pitch
-				uav_pitch = uav_pitch * 2 - 180;
+				uav_pitch = uav_pitch * 2;
+				if( uav_pitch > 180 ) uav_pitch -= 360;
 				uav_roll = GPSData.ui8AngleY;                   // attitude roll
-				uav_roll = uav_roll * 2 - 180;
+				uav_roll = uav_roll * 2;
+				if( uav_roll > 180 ) uav_roll -= 360;
 				uav_heading = GPSData.ui8AngleZ;             // attitude heading
 				uav_gpsheading = GPSData.ui16Direction;           // gps heading
 				//uav_bat = ReceiverData.ui8Volt*100U;            // battery voltage (mv)
@@ -480,6 +481,14 @@ struct
 				DEBUG_SERIAL.print(ui16RxOk);
 				DEBUG_SERIAL.print(" / ");
 				DEBUG_SERIAL.println(ui16RxFail);
+
+				DEBUG_SERIAL.print("Roll/Pitch/Height: ");
+				DEBUG_SERIAL.print(uav_roll);
+				DEBUG_SERIAL.print(" / ");
+				DEBUG_SERIAL.print(uav_pitch);
+				DEBUG_SERIAL.print(" / ");
+				DEBUG_SERIAL.println(uav_alt);
+
 #endif
 
 #ifdef HOTT_SIMULATION_DEBUG
