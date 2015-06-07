@@ -438,10 +438,10 @@ struct
 				uav_alt = (int32_t) GPSData.ui16Altitude * 10;  // altitude (cm)
 				uav_groundspeed = GPSData.ui16Speed;     // ground speed in km/h
 				uav_groundspeedms = GPSData.ui16Speed / 3.6f; // ground speed in m/s
-				uav_pitch = GPSData.ui8AngleX;                 // attitude pitch
+				uav_pitch = GPSData.ui8AngleY;                 // attitude pitch
 				uav_pitch = uav_pitch * 2;
 				if( uav_pitch > 180 ) uav_pitch -= 360;
-				uav_roll = GPSData.ui8AngleY;                   // attitude roll
+				uav_roll = GPSData.ui8AngleX;                   // attitude roll
 				uav_roll = uav_roll * 2;
 				if( uav_roll > 180 ) uav_roll -= 360;
 				uav_heading = GPSData.ui8AngleZ;             // attitude heading
