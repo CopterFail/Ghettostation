@@ -190,9 +190,6 @@ void setup()
 	servoconf_tmp[1] = configuration.pan_maxpwm;
 	servoconf_tmp[2] = configuration.tilt_minpwm;
 	servoconf_tmp[3] = configuration.tilt_maxpwm;
-	RX5808.vSelectChannel(configuration.channel);
-	RX5808.vSelectReceiver(configuration.receiver);
-	RX5808.vSelectDiversity(configuration.diversity);
 	home_bearing = configuration.bearing; // use last bearing position of previous session.
 	voltage_ratio = (float) (configuration.voltage_ratio / 100.0);
 	delay(20);
@@ -231,7 +228,14 @@ void setup()
 	compass.SetScale(1.3);// Set the scale of the compass.
 	compass.SetMeasurementMode(Measurement_Continuous);// Set the measurement mode to Continuous
 #endif
+
 	delay(2500);  // Wait until osd is initialised
+	//RX5808.ui8ScanChannels(1); // alternative? 150ms*32=4.8s
+
+	RX5808.vSelectChannel(configuration.channel);
+	RX5808.vSelectReceiver(configuration.receiver);
+	RX5808.vSelectDiversity(configuration.diversity);
+
 }
 
 //######################################## MAIN LOOP #####################################################################
@@ -1464,6 +1468,9 @@ void clear_eeprom(void)
 		configuration.osd_enabled = 0;
 		configuration.bearing_method = 1;
 		configuration.voltage_ratio = VOLTAGE_RATIO;  // ratio*10
+		configuration.channel = 6;
+		configuration.receiver = 0;
+		configuration.diversity = 1;
 		EEPROM_write(config_bank[j], configuration);
 	}
 	sei();

@@ -100,7 +100,7 @@ extern uint16_t test_servo_cnt;
 extern long baudrates[8];
 
 //Configuration stored in EEprom
-struct config_t // 28 bytes
+struct config_t //
 {
 	int16_t config_crc;
 	int16_t pan_minpwm;
